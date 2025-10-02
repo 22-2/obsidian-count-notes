@@ -1,5 +1,6 @@
 import { TFile } from "obsidian";
 import type CountNovelsPlugin from "../main";
+import { VIEW_TYPE_COUNT_NOVEL } from "../utils/constants";
 
 /**
  * データ収集サービス
@@ -164,11 +165,30 @@ export class DataCollectionService {
 			// データを保存
 			await this.plugin.dataStorage.saveData();
 
+			// データ更新時にビューを更新
+			this.refreshViews();
+
 			console.log(
 				`Count Novels: Data collection completed. Recorded ${difference} characters for ${today}`
 			);
 		} catch (error) {
 			console.error("Count Novels: Error during data collection:", error);
 		}
+	}
+
+	/**
+	 * データ更新時にビューを更新する機能
+	 * 要件: データ更新時にサマリーを再描画する
+	 */
+	private refreshViews(): void {
+		// アクティブなCount Novelsビューを探して更新
+		this.plugin.app.workspace.iterateAllLeaves((leaf) => {
+			if (leaf.view.getViewType() === VIEW_TYPE_COUNT_NOVEL) {
+				const view = leaf.view as any; // CountNovelHomeの型を使用
+				if (view.refreshSummary && typeof view.refreshSummary === 'function') {
+					view.refreshSummary();
+				}
+			}
+		});
 	}
 }

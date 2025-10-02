@@ -54,7 +54,32 @@
 .count-novels-summary-content {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 15px;
+}
+
+.count-novels-summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  background-color: var(--background-primary);
+  border-radius: 6px;
+  border: 1px solid var(--background-modifier-border);
+}
+
+.count-novels-summary-label {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.count-novels-summary-value {
+  color: var(--text-normal);
+  font-weight: 600;
+  font-size: 1.1em;
+}
+
+.count-novels-streak {
+  color: var(--text-accent);
 }
 
 /* グラフセクション */
