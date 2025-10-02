@@ -92,9 +92,46 @@
 
 .count-novels-chart-content {
   min-height: 300px;
+  position: relative;
+}
+
+.count-novels-chart-canvas {
+  max-height: 300px;
+  width: 100% !important;
+  height: 300px !important;
+}
+
+/* Chart.js フォールバック表示 */
+.count-novels-text-stats {
+  padding: 20px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.count-novels-text-stats h3 {
+  color: var(--text-normal);
+  margin-bottom: 15px;
+  font-size: 1em;
+}
+
+.count-novels-stat-item {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  padding: 5px 10px;
+  margin-bottom: 5px;
+  background-color: var(--background-primary);
+  border-radius: 4px;
+  border: 1px solid var(--background-modifier-border);
+}
+
+.count-novels-stat-item .positive {
+  color: var(--text-accent);
+  font-weight: 600;
+}
+
+.count-novels-stat-item .negative {
+  color: var(--text-error);
+  font-weight: 600;
 }
 
 /* プレースホルダーテキスト */
@@ -102,4 +139,8 @@
   color: var(--text-muted);
   font-style: italic;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
 }

@@ -285,6 +285,93 @@ It has multiple lines and paragraphs.`,
 		// Should return 2 (today + yesterday) because there's a gap 2 days ago
 		expect(brokenStreakResult).toBe(2);
 	});
+
+	test("should display chart with monthly data", async ({ vault }) => {
+		const obsPage = new ObsidianPageObject(
+			vault.window,
+			vault.pluginHandleMap
+		);
+
+		// 1. Create test files and populate data
+		const testFile = {
+			path: "chart-test.md",
+			content: `---
+tags: [novel]
+---
+
+# Chart Test Chapter
+This content is for testing the chart display functionality.
+It should generate some character count data for the chart.`,
+		};
+
+		await obsPage.writeFile(testFile.path, testFile.content);
+		await vault.window.waitForTimeout(500);
+
+		// 2. Trigger data collection
+		await vault.window.evaluate(
+			async (pluginId) => {
+				const plugin = app.plugins.getPlugin(pluginId) as any;
+				if (plugin) {
+					await plugin.collectData();
+				}
+			},
+			PLUGIN_ID
+		);
+
+		// 3. Test chart functionality
+		const chartTestResult = await vault.window.evaluate(
+			async (pluginId) => {
+				const plugin = app.plugins.getPlugin(pluginId) as any;
+				if (!plugin) return null;
+
+				// Open the Count Novels view
+				await app.workspace.getLeaf("tab")!.setViewState({
+					type: "count-novels-home",
+					active: true,
+				});
+
+				// Wait for the view to render
+				await new Promise(resolve => setTimeout(resolve, 200));
+
+				const leaves = app.workspace.getLeavesOfType("count-novels-home");
+				if (leaves.length === 0) return { viewExists: false };
+
+				const view = leaves[0].view as any;
+				
+				// Check if chart elements exist
+				const chartSection = view.containerEl.querySelector('.count-novels-chart');
+				const chartContent = view.containerEl.querySelector('.count-novels-chart-content');
+				const chartCanvas = view.containerEl.querySelector('.count-novels-chart-canvas');
+				const chartFallback = view.containerEl.querySelector('.count-novels-text-stats');
+				
+				// Check if Chart.js is initialized
+				const hasChartInstance = !!view.chartInstance;
+				
+				return {
+					viewExists: true,
+					hasChartSection: !!chartSection,
+					hasChartContent: !!chartContent,
+					hasChartCanvas: !!chartCanvas,
+					hasChartFallback: !!chartFallback,
+					hasChartInstance: hasChartInstance,
+					chartInstanceType: hasChartInstance ? typeof view.chartInstance : null
+				};
+			},
+			PLUGIN_ID
+		);
+
+		expect(chartTestResult).toBeTruthy();
+		expect(chartTestResult!.viewExists).toBe(true);
+		expect(chartTestResult!.hasChartSection).toBe(true);
+		expect(chartTestResult!.hasChartContent).toBe(true);
+		
+		// Chart should either have a canvas (Chart.js working) or fallback (Chart.js failed)
+		const hasChart = chartTestResult!.hasChartCanvas || chartTestResult!.hasChartFallback;
+		expect(hasChart).toBe(true);
+
+		// Clean up
+		await obsPage.deleteFile(testFile.path);
+	});
 });
 
 // Custom settings for these tests

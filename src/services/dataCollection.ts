@@ -181,18 +181,34 @@ export class DataCollectionService {
 
 	/**
 	 * データ更新時にビューを更新する機能
-	 * 要件: データ更新時にサマリーを再描画する
+	 * 要件: データ更新時にサマリーとグラフを再描画する
 	 */
 	private refreshViews(): void {
 		// アクティブなCount Novelsビューを探して更新
 		this.plugin.app.workspace.iterateAllLeaves((leaf) => {
 			if (leaf.view.getViewType() === VIEW_TYPE_COUNT_NOVEL) {
 				const view = leaf.view as any; // CountNovelHomeの型を使用
+				
+				// サマリーとグラフの両方を更新
 				if (
-					view.refreshSummary &&
-					typeof view.refreshSummary === "function"
+					view.refreshStats &&
+					typeof view.refreshStats === "function"
 				) {
-					view.refreshSummary();
+					view.refreshStats();
+				} else {
+					// フォールバック: 個別メソッドを呼び出し
+					if (
+						view.refreshSummary &&
+						typeof view.refreshSummary === "function"
+					) {
+						view.refreshSummary();
+					}
+					if (
+						view.refreshChart &&
+						typeof view.refreshChart === "function"
+					) {
+						view.refreshChart();
+					}
 				}
 			}
 		});

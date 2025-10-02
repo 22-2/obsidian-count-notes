@@ -8,6 +8,17 @@ import {
 	DEFAULT_SETTINGS,
 } from "./settings";
 import { VIEW_TYPE_COUNT_NOVEL } from "./utils/constants";
+import {
+	Chart,
+	CategoryScale,
+	LinearScale,
+	BarElement,
+	Title,
+	Tooltip,
+	Legend,
+	type ChartConfiguration,
+	type ChartData,
+} from "chart.js";
 
 export default class CountNovelsPlugin extends Plugin {
 	settings: CountNovelsSettings = DEFAULT_SETTINGS;
@@ -152,11 +163,15 @@ export default class CountNovelsPlugin extends Plugin {
 
 class CountNovelHome extends ItemView {
 	private plugin: CountNovelsPlugin;
+	private chartInstance?: Chart;
 
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
 		// プラグインインスタンスは後で設定される
 		this.plugin = null as any;
+		
+		// Chart.jsライブラリを初期化
+		this.initializeChartJS();
 	}
 
 	/**
@@ -164,6 +179,22 @@ class CountNovelHome extends ItemView {
 	 */
 	setPlugin(plugin: CountNovelsPlugin): void {
 		this.plugin = plugin;
+	}
+
+	/**
+	 * Chart.jsライブラリを初期化する機能を実装
+	 * 要件4.1: Chart.jsを使用してバーグラフを描画する
+	 */
+	private initializeChartJS(): void {
+		// Chart.jsに必要なコンポーネントを登録
+		Chart.register(
+			CategoryScale,
+			LinearScale,
+			BarElement,
+			Title,
+			Tooltip,
+			Legend
+		);
 	}
 
 	getViewType() {
@@ -178,7 +209,13 @@ class CountNovelHome extends ItemView {
 		this.renderView();
 	}
 
-	async onClose() {}
+	async onClose() {
+		// Chart.jsインスタンスをクリーンアップ
+		if (this.chartInstance) {
+			this.chartInstance.destroy();
+			this.chartInstance = undefined;
+		}
+	}
 
 	/**
 	 * 統計ビューの基本構造を描画
@@ -243,7 +280,7 @@ class CountNovelHome extends ItemView {
 		// サマリー表示機能を実装
 		this.renderSummary(summarySection);
 
-		// グラフセクション（タスク8で実装予定）
+		// グラフセクション
 		const chartSection = container.createDiv("count-novels-chart");
 		chartSection.createEl("h2", { 
 			text: "月間グラフ", 
@@ -251,10 +288,9 @@ class CountNovelHome extends ItemView {
 		});
 		
 		const chartContent = chartSection.createDiv("count-novels-chart-content");
-		chartContent.createEl("p", {
-			text: "グラフ機能は次のタスクで実装されます",
-			cls: "count-novels-placeholder"
-		});
+		
+		// Chart.jsグラフ表示機能を実装
+		this.renderChart(chartContent);
 	}
 
 	/**
@@ -381,6 +417,220 @@ class CountNovelHome extends ItemView {
 	}
 
 	/**
+	 * Chart.jsグラフを描画・更新する機能を実装
+	 * 要件3.4: 月間バーグラフを表示する
+	 * 要件4.1: Chart.jsを使用してバーグラフを描画する
+	 */
+	private renderChart(container: HTMLElement): void {
+		// 既存のチャートを破棄
+		if (this.chartInstance) {
+			this.chartInstance.destroy();
+			this.chartInstance = undefined;
+		}
+
+		// キャンバス要素を作成
+		const canvas = container.createEl("canvas", {
+			cls: "count-novels-chart-canvas"
+		});
+
+		// グラフデータを生成
+		const chartData = this.generateChartData();
+
+		// 月間バーグラフの設定を作成
+		const chartConfig = this.createChartConfiguration(chartData);
+
+		// グラフを描画
+		try {
+			this.chartInstance = new Chart(canvas, chartConfig);
+		} catch (error) {
+			console.error("Count Novels: Failed to create chart:", error);
+			// Chart.js読み込み失敗時のフォールバック
+			this.renderChartFallback(container);
+		}
+	}
+
+	/**
+	 * 月間バーグラフの設定を作成
+	 * 要件4.2: X軸には日付（1日、2日、3日...）を表示
+	 * 要件4.3: Y軸には文字数を表示
+	 * 要件4.4: 各日の執筆文字数をバーで表示
+	 * 要件4.5: マイナス値がある場合は削除された文字数として異なる色で表示
+	 */
+	private createChartConfiguration(chartData: ChartData<'bar'>): ChartConfiguration<'bar'> {
+		return {
+			type: 'bar',
+			data: chartData,
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				plugins: {
+					title: {
+						display: true,
+						text: '今月の執筆進捗',
+						color: 'var(--text-normal)'
+					},
+					legend: {
+						display: true,
+						labels: {
+							color: 'var(--text-normal)'
+						}
+					},
+					tooltip: {
+						callbacks: {
+							label: (context) => {
+								const value = context.parsed.y;
+								const label = context.dataset.label || '';
+								return `${label}: ${value.toLocaleString()}文字`;
+							}
+						}
+					}
+				},
+				scales: {
+					x: {
+						// 要件4.2: X軸には日付（1日、2日、3日...）を表示
+						title: {
+							display: true,
+							text: '日付',
+							color: 'var(--text-normal)'
+						},
+						ticks: {
+							color: 'var(--text-muted)'
+						},
+						grid: {
+							color: 'var(--background-modifier-border)'
+						}
+					},
+					y: {
+						// 要件4.3: Y軸には文字数を表示
+						title: {
+							display: true,
+							text: '文字数',
+							color: 'var(--text-normal)'
+						},
+						ticks: {
+							color: 'var(--text-muted)',
+							callback: function(value) {
+								return typeof value === 'number' ? value.toLocaleString() : value;
+							}
+						},
+						grid: {
+							color: 'var(--background-modifier-border)'
+						},
+						beginAtZero: true
+					}
+				}
+			}
+		};
+	}
+
+	/**
+	 * dailyStatsからグラフデータを生成する機能を実装
+	 * 要件4.4: 各日の執筆文字数をバーで表示
+	 * 要件4.5: マイナス値がある場合は削除された文字数として異なる色で表示
+	 * 要件4.6: 月が変わる場合は新しい月のデータでグラフを更新
+	 */
+	private generateChartData(): ChartData<'bar'> {
+		const pluginData = this.plugin.dataStorage.getData();
+		
+		if (!pluginData || !pluginData.dailyStats) {
+			return {
+				labels: [],
+				datasets: []
+			};
+		}
+
+		// 現在の月のデータを取得
+		const currentDate = new Date();
+		const currentYear = currentDate.getFullYear();
+		const currentMonth = currentDate.getMonth() + 1;
+		const monthPrefix = `${currentYear}-${currentMonth.toString().padStart(2, '0')}`;
+
+		// 月の日数を取得
+		const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+
+		// 日付ラベルを生成（1日、2日、3日...）
+		const labels: string[] = [];
+		const positiveData: number[] = [];
+		const negativeData: number[] = [];
+
+		for (let day = 1; day <= daysInMonth; day++) {
+			const dayString = day.toString();
+			labels.push(`${dayString}日`);
+
+			const dateKey = `${monthPrefix}-${dayString.padStart(2, '0')}`;
+			const dayStats = pluginData.dailyStats[dateKey] || 0;
+
+			// 要件4.4, 4.5: 正の値と負の値を分けて表示
+			if (dayStats >= 0) {
+				positiveData.push(dayStats);
+				negativeData.push(0);
+			} else {
+				positiveData.push(0);
+				negativeData.push(Math.abs(dayStats)); // 負の値を正の値として表示
+			}
+		}
+
+		return {
+			labels,
+			datasets: [
+				{
+					label: '執筆文字数',
+					data: positiveData,
+					backgroundColor: 'rgba(54, 162, 235, 0.8)',
+					borderColor: 'rgba(54, 162, 235, 1)',
+					borderWidth: 1
+				},
+				{
+					label: '削除文字数',
+					data: negativeData,
+					backgroundColor: 'rgba(255, 99, 132, 0.8)',
+					borderColor: 'rgba(255, 99, 132, 1)',
+					borderWidth: 1
+				}
+			]
+		};
+	}
+
+	/**
+	 * Chart.js読み込み失敗時のフォールバック表示
+	 */
+	private renderChartFallback(container: HTMLElement): void {
+		container.empty();
+		container.createEl("p", {
+			text: "グラフの読み込みに失敗しました。テキスト形式で統計を表示します。",
+			cls: "count-novels-placeholder"
+		});
+
+		// 簡単なテキストベースの統計表示
+		const pluginData = this.plugin.dataStorage.getData();
+		if (pluginData && pluginData.dailyStats) {
+			const currentDate = new Date();
+			const currentYear = currentDate.getFullYear();
+			const currentMonth = currentDate.getMonth() + 1;
+			const monthPrefix = `${currentYear}-${currentMonth.toString().padStart(2, '0')}`;
+
+			const monthlyStats = Object.entries(pluginData.dailyStats)
+				.filter(([date]) => date.startsWith(monthPrefix))
+				.sort(([a], [b]) => a.localeCompare(b));
+
+			if (monthlyStats.length > 0) {
+				const statsContainer = container.createDiv("count-novels-text-stats");
+				statsContainer.createEl("h3", { text: "今月の執筆記録" });
+
+				monthlyStats.forEach(([date, count]) => {
+					const day = date.split('-')[2];
+					const statItem = statsContainer.createDiv("count-novels-stat-item");
+					statItem.createEl("span", { text: `${day}日: ` });
+					statItem.createEl("span", { 
+						text: `${count.toLocaleString()}文字`,
+						cls: count >= 0 ? "positive" : "negative"
+					});
+				});
+			}
+		}
+	}
+
+	/**
 	 * ビューを再描画する（データ更新時に使用）
 	 * データ更新時にサマリーを再描画する機能を実装
 	 */
@@ -404,5 +654,32 @@ class CountNovelHome extends ItemView {
 			// サマリーを再描画
 			this.renderSummary(summarySection as HTMLElement);
 		}
+	}
+
+	/**
+	 * グラフを更新する（効率的な更新用）
+	 * データ更新時にグラフを再描画する機能を実装
+	 */
+	public refreshChart(): void {
+		const chartSection = this.containerEl.querySelector('.count-novels-chart-content');
+		if (chartSection && this.chartInstance) {
+			// 新しいデータを生成
+			const newChartData = this.generateChartData();
+			
+			// チャートデータを更新
+			this.chartInstance.data = newChartData;
+			this.chartInstance.update();
+		} else if (chartSection) {
+			// チャートが存在しない場合は再作成
+			this.renderChart(chartSection as HTMLElement);
+		}
+	}
+
+	/**
+	 * サマリーとグラフの両方を更新する（統合更新メソッド）
+	 */
+	public refreshStats(): void {
+		this.refreshSummary();
+		this.refreshChart();
 	}
 }
