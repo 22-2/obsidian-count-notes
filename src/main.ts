@@ -10,6 +10,7 @@ import {
 	type ChartConfiguration,
 	type ChartData,
 } from "chart.js";
+import annotationPlugin from "chartjs-plugin-annotation";
 import log from "loglevel";
 import { ItemView, Plugin, WorkspaceLeaf } from "obsidian";
 import { DataStorage } from "./data";
@@ -192,7 +193,8 @@ class CountNovelHome extends ItemView {
 			BarElement,
 			Title,
 			Tooltip,
-			Legend
+			Legend,
+			annotationPlugin
 		);
 	}
 
@@ -545,6 +547,59 @@ class CountNovelHome extends ItemView {
 								const value = context.parsed.y;
 								const label = context.dataset.label || "";
 								return `${label}: ${value.toLocaleString()}文字`;
+							},
+						},
+					},
+					annotation: {
+						annotations: {
+							averageLine: {
+								type: "line",
+								yMin: (() => {
+									// 平均値を計算
+									let totalValue = 0;
+									let count = 0;
+									chartData.datasets.forEach((dataset) => {
+										dataset.data.forEach((value) => {
+											if (
+												typeof value === "number" &&
+												value > 0
+											) {
+												totalValue += value;
+												count++;
+											}
+										});
+									});
+									return count > 0 ? totalValue / count : 0;
+								})(),
+								yMax: (() => {
+									// 平均値を計算（同じ値）
+									let totalValue = 0;
+									let count = 0;
+									chartData.datasets.forEach((dataset) => {
+										dataset.data.forEach((value) => {
+											if (
+												typeof value === "number" &&
+												value > 0
+											) {
+												totalValue += value;
+												count++;
+											}
+										});
+									});
+									return count > 0 ? totalValue / count : 0;
+								})(),
+								borderColor: "#FFD700", // 黄色
+								borderWidth: 2,
+								borderDash: [5, 5], // 点線
+								label: {
+									content: "平均値",
+									position: "end",
+									backgroundColor: "#FFD700",
+									color: "#000",
+									font: {
+										size: 11,
+									},
+								},
 							},
 						},
 					},
