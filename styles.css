@@ -2,145 +2,145 @@
 
 /* メインコンテナ */
 .count-novels-main {
-  padding: 20px;
-  max-width: 800px;
-  margin: 0 auto;
+	padding: 20px;
+	max-width: 800px;
+	margin: 0 auto;
 }
 
 /* ヘッダー */
 .count-novels-header {
-  color: var(--text-normal);
-  border-bottom: 2px solid var(--background-modifier-border);
-  padding-bottom: 10px;
-  margin-bottom: 20px;
+	color: var(--text-normal);
+	border-bottom: 2px solid var(--background-modifier-border);
+	padding-bottom: 10px;
+	margin-bottom: 20px;
 }
 
 /* データなしメッセージ */
 .count-novels-no-data {
-  text-align: center;
-  padding: 40px 20px;
-  color: var(--text-muted);
+	text-align: center;
+	padding: 40px 20px;
+	color: var(--text-muted);
 }
 
 .count-novels-no-data-message {
-  font-size: 1.2em;
-  font-weight: 500;
-  margin-bottom: 10px;
-  color: var(--text-normal);
+	font-size: 1.2em;
+	font-weight: 500;
+	margin-bottom: 10px;
+	color: var(--text-normal);
 }
 
 .count-novels-no-data-subtitle {
-  font-size: 0.9em;
-  opacity: 0.8;
+	font-size: 0.9em;
+	opacity: 0.8;
 }
 
 /* セクションタイトル */
 .count-novels-section-title {
-  color: var(--text-normal);
-  font-size: 1.1em;
-  margin-bottom: 15px;
-  padding-bottom: 5px;
-  border-bottom: 1px solid var(--background-modifier-border);
+	color: var(--text-normal);
+	font-size: 1.1em;
+	margin-bottom: 15px;
+	padding-bottom: 5px;
+	border-bottom: 1px solid var(--background-modifier-border);
 }
 
 /* サマリーセクション */
 .count-novels-summary {
-  margin-bottom: 30px;
-  padding: 15px;
-  background-color: var(--background-secondary);
-  border-radius: 8px;
+	margin-bottom: 30px;
+	padding: 15px;
+	background-color: var(--background-secondary);
+	border-radius: 8px;
 }
 
 .count-novels-summary-content {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
+	display: flex;
+	flex-direction: column;
+	gap: 15px;
 }
 
 .count-novels-summary-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 15px;
-  background-color: var(--background-primary);
-  border-radius: 6px;
-  border: 1px solid var(--background-modifier-border);
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 10px 15px;
+	background-color: var(--background-primary);
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
 }
 
 .count-novels-summary-label {
-  color: var(--text-muted);
-  font-weight: 500;
+	color: var(--text-muted);
+	font-weight: 500;
 }
 
 .count-novels-summary-value {
-  color: var(--text-normal);
-  font-weight: 600;
-  font-size: 1.1em;
+	color: var(--text-normal);
+	font-weight: 600;
+	font-size: 1.1em;
 }
 
 .count-novels-streak {
-  color: var(--text-accent);
+	color: var(--text-accent);
 }
 
 /* グラフセクション */
 .count-novels-chart {
-  margin-bottom: 20px;
-  padding: 15px;
-  background-color: var(--background-secondary);
-  border-radius: 8px;
+	margin-bottom: 20px;
+	padding: 15px;
+	background-color: var(--background-secondary);
+	border-radius: 8px;
 }
 
 .count-novels-chart-content {
-  min-height: 300px;
-  position: relative;
+	min-height: 300px;
+	position: relative;
 }
 
 .count-novels-chart-canvas {
-  max-height: 300px;
-  width: 100% !important;
-  height: 300px !important;
+	max-height: 300px;
+	width: 100% !important;
+	height: 300px !important;
 }
 
 /* Chart.js フォールバック表示 */
 .count-novels-text-stats {
-  padding: 20px;
-  max-height: 300px;
-  overflow-y: auto;
+	padding: 20px;
+	max-height: 300px;
+	overflow-y: auto;
 }
 
 .count-novels-text-stats h3 {
-  color: var(--text-normal);
-  margin-bottom: 15px;
-  font-size: 1em;
+	color: var(--text-normal);
+	margin-bottom: 15px;
+	font-size: 1em;
 }
 
 .count-novels-stat-item {
-  display: flex;
-  justify-content: space-between;
-  padding: 5px 10px;
-  margin-bottom: 5px;
-  background-color: var(--background-primary);
-  border-radius: 4px;
-  border: 1px solid var(--background-modifier-border);
+	display: flex;
+	justify-content: space-between;
+	padding: 5px 10px;
+	margin-bottom: 5px;
+	background-color: var(--background-primary);
+	border-radius: 4px;
+	border: 1px solid var(--background-modifier-border);
 }
 
 .count-novels-stat-item .positive {
-  color: var(--text-accent);
-  font-weight: 600;
+	color: var(--text-accent);
+	font-weight: 600;
 }
 
 .count-novels-stat-item .negative {
-  color: var(--text-error);
-  font-weight: 600;
+	color: var(--text-error);
+	font-weight: 600;
 }
 
 /* プレースホルダーテキスト */
 .count-novels-placeholder {
-  color: var(--text-muted);
-  font-style: italic;
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 300px;
+	color: var(--text-muted);
+	font-style: italic;
+	text-align: center;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 300px;
 }
