@@ -27,7 +27,11 @@ export default class CountNovelsPlugin extends Plugin {
 		this.togglLoggersBy(this.settings.logLevel);
 		this.registerView(
 			VIEW_TYPE_COUNT_NOVEL,
-			(leaf) => new CountNovelHome(leaf)
+			(leaf) => {
+				const view = new CountNovelHome(leaf);
+				view.setPlugin(this);
+				return view;
+			}
 		);
 		this.addCommand({
 			id: "open-count-novels-home",
@@ -147,8 +151,19 @@ export default class CountNovelsPlugin extends Plugin {
 }
 
 class CountNovelHome extends ItemView {
+	private plugin: CountNovelsPlugin;
+
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
+		// プラグインインスタンスは後で設定される
+		this.plugin = null as any;
+	}
+
+	/**
+	 * プラグインインスタンスを設定する
+	 */
+	setPlugin(plugin: CountNovelsPlugin): void {
+		this.plugin = plugin;
 	}
 
 	getViewType() {
@@ -160,12 +175,96 @@ class CountNovelHome extends ItemView {
 	}
 
 	async onOpen() {
-		this.containerEl.empty();
-		this.containerEl.createEl("h1", { text: "Count Novels Home" });
-		this.containerEl.createEl("p", {
-			text: "Welcome to the Count Novels plugin!",
-		});
+		this.renderView();
 	}
 
 	async onClose() {}
+
+	/**
+	 * 統計ビューの基本構造を描画
+	 * 要件3.1: システムは統計ビューを開く
+	 * 要件3.5: データが存在しない場合は「データがありません」メッセージを表示
+	 */
+	private renderView(): void {
+		this.containerEl.empty();
+		
+		// メインコンテナ
+		const mainContainer = this.containerEl.createDiv("count-novels-main");
+		
+		// ヘッダー
+		const header = mainContainer.createEl("h1", { 
+			text: "執筆進捗", 
+			cls: "count-novels-header" 
+		});
+
+		// データの存在確認
+		const pluginData = this.plugin.dataStorage.getData();
+		const hasData = pluginData && Object.keys(pluginData.dailyStats).length > 0;
+
+		if (!hasData) {
+			// 要件3.5: データが存在しない場合のメッセージ表示
+			this.renderNoDataMessage(mainContainer);
+		} else {
+			// データが存在する場合の基本構造を作成
+			this.renderStatsStructure(mainContainer);
+		}
+	}
+
+	/**
+	 * データが存在しない場合のメッセージを表示
+	 * 要件3.5: IF データが存在しない場合 THEN システムは「データがありません」メッセージを表示する
+	 */
+	private renderNoDataMessage(container: HTMLElement): void {
+		const noDataContainer = container.createDiv("count-novels-no-data");
+		
+		noDataContainer.createEl("p", {
+			text: "データがありません",
+			cls: "count-novels-no-data-message"
+		});
+		
+		noDataContainer.createEl("p", {
+			text: "執筆を開始すると、ここに進捗が表示されます。",
+			cls: "count-novels-no-data-subtitle"
+		});
+	}
+
+	/**
+	 * 統計データが存在する場合の基本HTML構造を作成
+	 * 後のタスクでサマリーとグラフ機能が追加される予定
+	 */
+	private renderStatsStructure(container: HTMLElement): void {
+		// サマリーセクション（タスク7で実装予定）
+		const summarySection = container.createDiv("count-novels-summary");
+		summarySection.createEl("h2", { 
+			text: "サマリー", 
+			cls: "count-novels-section-title" 
+		});
+		
+		const summaryContent = summarySection.createDiv("count-novels-summary-content");
+		summaryContent.createEl("p", {
+			text: "サマリー機能は次のタスクで実装されます",
+			cls: "count-novels-placeholder"
+		});
+
+		// グラフセクション（タスク8で実装予定）
+		const chartSection = container.createDiv("count-novels-chart");
+		chartSection.createEl("h2", { 
+			text: "月間グラフ", 
+			cls: "count-novels-section-title" 
+		});
+		
+		const chartContent = chartSection.createDiv("count-novels-chart-content");
+		chartContent.createEl("p", {
+			text: "グラフ機能は次のタスクで実装されます",
+			cls: "count-novels-placeholder"
+		});
+	}
+
+	/**
+	 * ビューを再描画する（データ更新時に使用）
+	 * 他のタスクから呼び出される予定
+	 */
+	public refreshView(): void {
+		this.renderView();
+	}
 }
