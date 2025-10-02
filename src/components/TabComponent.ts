@@ -1,15 +1,15 @@
-import type { PeriodType } from '../types/period';
-import { PERIOD_CONFIGS } from '../types/period';
+import type { PeriodType } from "../types/period";
+import { PERIOD_CONFIGS } from "../types/period";
 
 export class TabComponent {
 	private container: HTMLElement;
-	private activeTab: PeriodType = 'month';
+	private activeTab: PeriodType = "month";
 	private onTabChange: (periodType: PeriodType) => void;
 
 	constructor(
 		container: HTMLElement,
 		onTabChange: (periodType: PeriodType) => void,
-		initialTab: PeriodType = 'month'
+		initialTab: PeriodType = "month"
 	) {
 		this.container = container;
 		this.onTabChange = onTabChange;
@@ -19,21 +19,21 @@ export class TabComponent {
 
 	private render(): void {
 		this.container.empty();
-		
-		const tabContainer = this.container.createDiv('count-novels-tabs');
-		
+
+		const tabContainer = this.container.createDiv("count-novels-tabs");
+
 		// タブボタンを作成
-		Object.values(PERIOD_CONFIGS).forEach(config => {
-			const tabButton = tabContainer.createEl('button', {
+		Object.values(PERIOD_CONFIGS).forEach((config) => {
+			const tabButton = tabContainer.createEl("button", {
 				text: config.shortLabel,
-				cls: 'count-novels-tab-button'
+				cls: "count-novels-tab-button",
 			});
 
 			if (config.type === this.activeTab) {
-				tabButton.addClass('active');
+				tabButton.addClass("active");
 			}
 
-			tabButton.addEventListener('click', () => {
+			tabButton.addEventListener("click", () => {
 				this.setActiveTab(config.type);
 			});
 		});
@@ -48,16 +48,18 @@ export class TabComponent {
 	}
 
 	private updateTabStyles(): void {
-		const tabButtons = this.container.querySelectorAll('.count-novels-tab-button');
-		
+		const tabButtons = this.container.querySelectorAll(
+			".count-novels-tab-button"
+		);
+
 		tabButtons.forEach((button, index) => {
-			const periodTypes: PeriodType[] = ['day', 'week', 'month', 'year'];
+			const periodTypes: PeriodType[] = ["day", "week", "month", "year"];
 			const periodType = periodTypes[index];
-			
+
 			if (periodType === this.activeTab) {
-				button.addClass('active');
+				button.addClass("active");
 			} else {
-				button.removeClass('active');
+				button.removeClass("active");
 			}
 		});
 	}

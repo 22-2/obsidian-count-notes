@@ -160,7 +160,9 @@ export class DataCollectionService {
 
 			// 今日の日付を取得（YYYY-MM-DD形式、ローカル時間）
 			const now = new Date();
-			const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+			const today = `${now.getFullYear()}-${String(
+				now.getMonth() + 1
+			).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
 			// 差分を記録（要件2.3, 2.4, 2.5に対応）
 			this.plugin.dataStorage.updateDailyStats(today, difference);
@@ -189,7 +191,7 @@ export class DataCollectionService {
 		this.plugin.app.workspace.iterateAllLeaves((leaf) => {
 			if (leaf.view.getViewType() === VIEW_TYPE_COUNT_NOVEL) {
 				const view = leaf.view as any; // CountNovelHomeの型を使用
-				
+
 				// サマリーとグラフの両方を更新
 				if (
 					view.refreshStats &&

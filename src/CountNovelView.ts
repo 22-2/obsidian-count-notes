@@ -1,11 +1,11 @@
 import { ItemView, WorkspaceLeaf } from "obsidian";
-import type CountNovelsPlugin from "./main";
-import { VIEW_TYPE_COUNT_NOVEL } from "./utils/constants";
-import { TabComponent } from "./components/TabComponent";
-import { StatsComponent } from "./components/StatsComponent";
 import { ChartComponent } from "./components/ChartComponent";
+import { StatsComponent } from "./components/StatsComponent";
+import { TabComponent } from "./components/TabComponent";
+import type CountNovelsPlugin from "./main";
 import { PeriodDataService } from "./services/periodDataService";
 import type { PeriodType } from "./types/period";
+import { VIEW_TYPE_COUNT_NOVEL } from "./utils/constants";
 
 export class CountNovelHome extends ItemView {
 	private plugin!: CountNovelsPlugin;
@@ -13,7 +13,7 @@ export class CountNovelHome extends ItemView {
 	private statsComponent?: StatsComponent;
 	private chartComponent?: ChartComponent;
 	private periodDataService?: PeriodDataService;
-	private currentPeriod: PeriodType = 'month';
+	private currentPeriod: PeriodType = "month";
 
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
@@ -23,8 +23,6 @@ export class CountNovelHome extends ItemView {
 		this.plugin = plugin;
 		this.periodDataService = new PeriodDataService(plugin.dataStorage);
 	}
-
-
 
 	getViewType() {
 		return VIEW_TYPE_COUNT_NOVEL;
@@ -38,7 +36,7 @@ export class CountNovelHome extends ItemView {
 		try {
 			this.renderView();
 		} catch (error) {
-			console.error('Count Novels: Failed to open view:', error);
+			console.error("Count Novels: Failed to open view:", error);
 			this.renderErrorMessage();
 		}
 	}
@@ -47,7 +45,7 @@ export class CountNovelHome extends ItemView {
 		try {
 			this.cleanup();
 		} catch (error) {
-			console.error('Count Novels: Error during cleanup:', error);
+			console.error("Count Novels: Error during cleanup:", error);
 		}
 	}
 
@@ -83,7 +81,7 @@ export class CountNovelHome extends ItemView {
 		const errorContainer = this.containerEl.createDiv("count-novels-error");
 		errorContainer.createEl("p", {
 			text: "プラグインの初期化に失敗しました",
-			cls: "count-novels-error-message"
+			cls: "count-novels-error-message",
 		});
 	}
 
@@ -118,13 +116,18 @@ export class CountNovelHome extends ItemView {
 
 			// チャートセクション
 			const chartSection = container.createDiv("count-novels-chart");
-			const chartContent = chartSection.createDiv("count-novels-chart-content");
+			const chartContent = chartSection.createDiv(
+				"count-novels-chart-content"
+			);
 			this.createChartComponent(chartContent);
 
 			// 初期データを表示
 			this.updateContent();
 		} catch (error) {
-			console.error('Count Novels: Failed to render main interface:', error);
+			console.error(
+				"Count Novels: Failed to render main interface:",
+				error
+			);
 			this.renderErrorMessage();
 		}
 	}
@@ -150,39 +153,41 @@ export class CountNovelHome extends ItemView {
 			this.currentPeriod = periodType;
 			this.updateContent();
 		} catch (error) {
-			console.error('Count Novels: Failed to change tab:', error);
+			console.error("Count Novels: Failed to change tab:", error);
 		}
 	}
 
 	private updateContent(): void {
-		if (!this.periodDataService || !this.statsComponent || !this.chartComponent) {
+		if (
+			!this.periodDataService ||
+			!this.statsComponent ||
+			!this.chartComponent
+		) {
 			return;
 		}
 
 		try {
 			// 統計データを取得して表示
-			const stats = this.periodDataService.getPeriodStats(this.currentPeriod);
+			const stats = this.periodDataService.getPeriodStats(
+				this.currentPeriod
+			);
 			this.statsComponent.render(stats, this.currentPeriod);
 
 			// チャートデータを取得して表示
-			const chartData = this.periodDataService.getChartData(this.currentPeriod);
+			const chartData = this.periodDataService.getChartData(
+				this.currentPeriod
+			);
 			this.chartComponent.render(chartData, this.currentPeriod);
 		} catch (error) {
-			console.error('Count Novels: Failed to update content:', error);
+			console.error("Count Novels: Failed to update content:", error);
 		}
 	}
-
-
-
-
-
-
 
 	public refreshView(): void {
 		try {
 			this.renderView();
 		} catch (error) {
-			console.error('Count Novels: Failed to refresh view:', error);
+			console.error("Count Novels: Failed to refresh view:", error);
 		}
 	}
 
@@ -190,7 +195,7 @@ export class CountNovelHome extends ItemView {
 		try {
 			this.updateContent();
 		} catch (error) {
-			console.error('Count Novels: Failed to refresh summary:', error);
+			console.error("Count Novels: Failed to refresh summary:", error);
 		}
 	}
 
@@ -198,7 +203,7 @@ export class CountNovelHome extends ItemView {
 		try {
 			this.updateContent();
 		} catch (error) {
-			console.error('Count Novels: Failed to refresh chart:', error);
+			console.error("Count Novels: Failed to refresh chart:", error);
 		}
 	}
 
@@ -206,7 +211,7 @@ export class CountNovelHome extends ItemView {
 		try {
 			this.updateContent();
 		} catch (error) {
-			console.error('Count Novels: Failed to refresh stats:', error);
+			console.error("Count Novels: Failed to refresh stats:", error);
 		}
 	}
 
@@ -223,7 +228,7 @@ export class CountNovelHome extends ItemView {
 				this.updateContent();
 			}
 		} catch (error) {
-			console.error('Count Novels: Failed to set period:', error);
+			console.error("Count Novels: Failed to set period:", error);
 		}
 	}
 }
