@@ -158,8 +158,9 @@ export class DataCollectionService {
 				`Count Novels: Previous total: ${previousTotal}, Current total: ${currentTotal}, Difference: ${difference}`
 			);
 
-			// 今日の日付を取得（YYYY-MM-DD形式）
-			const today = new Date().toISOString().split("T")[0];
+			// 今日の日付を取得（YYYY-MM-DD形式、ローカル時間）
+			const now = new Date();
+			const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
 			// 差分を記録（要件2.3, 2.4, 2.5に対応）
 			this.plugin.dataStorage.updateDailyStats(today, difference);
