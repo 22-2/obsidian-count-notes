@@ -201,33 +201,33 @@ class CountNovelHome extends ItemView {
 	 */
 	private getThemeColors() {
 		// Obsidianのテーマを判定（ダークテーマかライトテーマか）
-		const isDarkTheme = document.body.classList.contains('theme-dark');
-		
+		const isDarkTheme = document.body.classList.contains("theme-dark");
+
 		if (isDarkTheme) {
 			// ダークテーマの色（現在の設定）
 			return {
-				textPrimary: '#ffffff',
-				textSecondary: '#cccccc',
-				gridColor: '#444444',
-				tooltipBg: 'rgba(0, 0, 0, 0.8)',
-				tooltipBorder: '#666666',
-				positiveColor: 'rgba(100, 200, 100, 0.7)',
-				positiveBorder: 'rgba(100, 200, 100, 1)',
-				negativeColor: 'rgba(255, 140, 140, 0.7)',
-				negativeBorder: 'rgba(255, 140, 140, 1)',
+				textPrimary: "#ffffff",
+				textSecondary: "#cccccc",
+				gridColor: "#444444",
+				tooltipBg: "rgba(0, 0, 0, 0.8)",
+				tooltipBorder: "#666666",
+				positiveColor: "rgba(100, 200, 100, 0.7)",
+				positiveBorder: "rgba(100, 200, 100, 1)",
+				negativeColor: "rgba(255, 140, 140, 0.7)",
+				negativeBorder: "rgba(255, 140, 140, 1)",
 			};
 		} else {
 			// ライトテーマの色
 			return {
-				textPrimary: '#222222',
-				textSecondary: '#666666',
-				gridColor: '#e0e0e0',
-				tooltipBg: 'rgba(255, 255, 255, 0.95)',
-				tooltipBorder: '#cccccc',
-				positiveColor: 'rgba(40, 160, 40, 0.7)',
-				positiveBorder: 'rgba(40, 160, 40, 1)',
-				negativeColor: 'rgba(220, 60, 60, 0.7)',
-				negativeBorder: 'rgba(220, 60, 60, 1)',
+				textPrimary: "#222222",
+				textSecondary: "#666666",
+				gridColor: "#e0e0e0",
+				tooltipBg: "rgba(255, 255, 255, 0.95)",
+				tooltipBorder: "#cccccc",
+				positiveColor: "rgba(40, 160, 40, 0.7)",
+				positiveBorder: "rgba(40, 160, 40, 1)",
+				negativeColor: "rgba(220, 60, 60, 0.7)",
+				negativeBorder: "rgba(220, 60, 60, 1)",
 			};
 		}
 	}
@@ -566,6 +566,16 @@ class CountNovelHome extends ItemView {
 							font: {
 								size: 11,
 							},
+							// X軸を5日間隔で表示（1日, 6日, 11日...）
+							callback: function (value, index) {
+								const day = index + 1; // インデックスは0ベースなので+1
+								// 1日目、または5の倍数+1の日（6日、11日、16日...）を表示
+								if (day === 1 || (day - 1) % 5 === 0) {
+									return `${day}日`;
+								}
+								return "";
+							},
+							maxTicksLimit: 7, // 最大7個の目盛りに制限
 						},
 						grid: {
 							color: colors.gridColor,
@@ -588,10 +598,51 @@ class CountNovelHome extends ItemView {
 							font: {
 								size: 11,
 							},
+							// Y軸を動的に5分割で表示
+							maxTicksLimit: 5, // 0を含めて5個の目盛り（5分割）
+							stepSize: (() => {
+								// chartDataから全データセットの最大値を取得
+								let maxValue = 0;
+								chartData.datasets.forEach((dataset) => {
+									dataset.data.forEach((value) => {
+										if (typeof value === "number") {
+											maxValue = Math.max(
+												maxValue,
+												Math.abs(value)
+											);
+										}
+									});
+								});
+
+								if (maxValue === 0) return 1000; // デフォルト値
+
+								// 5分割するための適切なstepSizeを計算
+								const rawStep = maxValue / 5;
+								// きれいな数値に丸める（100, 200, 500, 1000, 2000, 5000など）
+								const magnitude = Math.pow(
+									10,
+									Math.floor(Math.log10(rawStep))
+								);
+								const normalized = rawStep / magnitude;
+								let niceStep;
+								if (normalized <= 1) niceStep = 1;
+								else if (normalized <= 2) niceStep = 2;
+								else if (normalized <= 5) niceStep = 5;
+								else niceStep = 10;
+								return niceStep * magnitude;
+							})(),
 							callback: function (value) {
-								return typeof value === "number"
-									? value.toLocaleString()
-									: value;
+								if (typeof value === "number") {
+									if (value === 0) return "0";
+									if (value >= 1000) {
+										return (
+											(value / 1000).toLocaleString() +
+											"k"
+										);
+									}
+									return value.toLocaleString();
+								}
+								return value;
 							},
 						},
 						grid: {
@@ -605,30 +656,41 @@ class CountNovelHome extends ItemView {
 			// カスタムプラグインで棒グラフの頂点に数値を表示
 			plugins: [
 				{
-					id: 'dataLabels',
+					id: "dataLabels",
 					afterDatasetsDraw: (chart: any) => {
 						const ctx = chart.ctx;
-						chart.data.datasets.forEach((dataset: any, datasetIndex: number) => {
-							const meta = chart.getDatasetMeta(datasetIndex);
-							if (!meta.hidden) {
-								meta.data.forEach((bar: any, index: number) => {
-									const value = dataset.data[index];
-									if (value > 0) { // 0より大きい値のみ表示
-										ctx.fillStyle = colors.textPrimary;
-										ctx.font = 'bold 11px sans-serif';
-										ctx.textAlign = 'center';
-										ctx.textBaseline = 'bottom';
-										
-										const x = bar.x;
-										const y = bar.y - 5; // バーの上に少し余白を空けて表示
-										
-										ctx.fillText(value.toLocaleString(), x, y);
-									}
-								});
+						chart.data.datasets.forEach(
+							(dataset: any, datasetIndex: number) => {
+								const meta = chart.getDatasetMeta(datasetIndex);
+								if (!meta.hidden) {
+									meta.data.forEach(
+										(bar: any, index: number) => {
+											const value = dataset.data[index];
+											if (value > 0) {
+												// 0より大きい値のみ表示
+												ctx.fillStyle =
+													colors.textPrimary;
+												ctx.font =
+													"bold 11px sans-serif";
+												ctx.textAlign = "center";
+												ctx.textBaseline = "bottom";
+
+												const x = bar.x;
+												const y = bar.y - 5; // バーの上に少し余白を空けて表示
+
+												ctx.fillText(
+													value.toLocaleString(),
+													x,
+													y
+												);
+											}
+										}
+									);
+								}
 							}
-						});
-					}
-				}
+						);
+					},
+				},
 			],
 		};
 	}
