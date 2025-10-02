@@ -64,6 +64,7 @@ export default class CountNovelsPlugin extends Plugin {
 				type: VIEW_TYPE_COUNT_NOVEL,
 				active: true,
 			});
+			this.app.workspace.revealLeaf(leaf);
 		} catch (error) {
 			console.error("Count Novels: Failed to open view:", error);
 		}
