@@ -1,6 +1,7 @@
 // E2E Test for Data Collection Functionality
 import "./setup/logger-setup";
 
+import { splitMd } from "src/utils/markdwon";
 import { expect, test } from "../base";
 import { DIST_DIR, PLUGIN_ID, SANDBOX_VAULT_NAME } from "../constants";
 import { ObsidianPageObject } from "./helpers/ObsidianPageObject";
@@ -98,7 +99,10 @@ It should not be counted.`,
 			.filter(
 				(file) => file.path === "novel1.md" || file.path === "novel2.md"
 			)
-			.reduce((sum, file) => sum + file.content.length, 0);
+			.reduce(
+				(sum, file) => sum + splitMd(file.content).content.length,
+				0
+			);
 
 		expect(dataCollectionResult!.lastTotalCharacterCount).toBe(
 			expectedCount
@@ -204,7 +208,7 @@ Brief content.`;
 			return plugin.dataStorage.getData()?.lastTotalCharacterCount || 0;
 		}, PLUGIN_ID);
 
-		expect(initialResult).toBe(initialContent.length);
+		expect(initialResult).toBe(splitMd(initialContent).content.length);
 
 		// 3. Modify file with more content
 		const expandedContent = `---
@@ -228,7 +232,7 @@ More characters means higher count in our tracking system.`;
 			return plugin.dataStorage.getData()?.lastTotalCharacterCount || 0;
 		}, PLUGIN_ID);
 
-		expect(updatedResult).toBe(expandedContent.length);
+		expect(updatedResult).toBe(splitMd(expandedContent).content.length);
 		expect(updatedResult).toBeGreaterThan(initialResult);
 
 		// Clean up
