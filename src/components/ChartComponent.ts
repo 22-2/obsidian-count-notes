@@ -163,7 +163,7 @@ export class ChartComponent {
 			ticks: {
 				color: colors.textSecondary,
 				font: { size: 11 },
-				maxTicksLimit: periodType === 'month' ? 7 : undefined,
+				maxTicksLimit: this.getMaxTicksLimit(periodType),
 				callback: undefined as any
 			},
 			grid: {
@@ -172,18 +172,42 @@ export class ChartComponent {
 			}
 		};
 
-		// 月表示の場合のみ特別な処理
-		if (periodType === 'month') {
-			baseConfig.ticks.callback = function (value: any, index: number) {
-				const day = index + 1;
-				if (day === 1 || (day - 1) % 5 === 0) {
-					return `${day}日`;
-				}
-				return '';
-			};
+		// 期間タイプに応じた特別な処理
+		switch (periodType) {
+			case 'day':
+				// 4時間単位なので全て表示
+				baseConfig.ticks.maxTicksLimit = undefined;
+				break;
+			case 'week':
+				// 7日なので全て表示
+				baseConfig.ticks.maxTicksLimit = undefined;
+				break;
+			case 'month':
+				// 5日単位のグループなので全て表示
+				baseConfig.ticks.maxTicksLimit = undefined;
+				break;
+			case 'year':
+				// 4四半期なので全て表示
+				baseConfig.ticks.maxTicksLimit = undefined;
+				break;
 		}
 
 		return baseConfig;
+	}
+
+	private getMaxTicksLimit(periodType: PeriodType): number | undefined {
+		switch (periodType) {
+			case 'day':
+				return 6; // 4時間単位で6つ
+			case 'week':
+				return 7; // 7日
+			case 'month':
+				return undefined; // 5日単位のグループ数は月によって変わる
+			case 'year':
+				return 4; // 4四半期
+			default:
+				return undefined;
+		}
 	}
 
 	private createYAxisConfig(colors: any, chartData: ChartData<'bar'>) {

@@ -126,16 +126,57 @@ export class PeriodDataService {
 		const pluginData = this.dataStorage.getData();
 		
 		if (!pluginData?.dailyStats) {
-			return [];
+			// データがない場合でも4時間単位のスロットを表示
+			return this.generateEmptyDaySlots();
 		}
 
+		// 今日のデータを4時間単位で分割表示（仮想的な分割）
+		// 実際のデータは日単位なので、今日の総文字数を時間帯に分散表示
 		const todayCount = pluginData.dailyStats[todayString] || 0;
+		const chartData: ChartDataPoint[] = [];
 		
-		return [{
-			label: '今日',
-			value: Math.max(0, todayCount),
-			date: todayString
-		}];
+		// 4時間単位で6つのスロット（0-4, 4-8, 8-12, 12-16, 16-20, 20-24）
+		for (let hour = 0; hour < 24; hour += 4) {
+			const endHour = hour + 4;
+			const label = `${hour.toString().padStart(2, '0')}-${endHour.toString().padStart(2, '0')}`;
+			
+			// 現在時刻に基づいて値を分散（簡易実装）
+			let value = 0;
+			if (todayCount > 0) {
+				const currentHour = new Date().getHours();
+				if (hour <= currentHour && currentHour < endHour) {
+					// 現在の時間帯に全ての文字数を表示
+					value = todayCount;
+				}
+			}
+			
+			chartData.push({
+				label,
+				value,
+				date: `${todayString}-${hour}`
+			});
+		}
+		
+		return chartData;
+	}
+
+	private generateEmptyDaySlots(): ChartDataPoint[] {
+		const today = new Date();
+		const todayString = this.formatDateString(today);
+		const chartData: ChartDataPoint[] = [];
+		
+		for (let hour = 0; hour < 24; hour += 4) {
+			const endHour = hour + 4;
+			const label = `${hour.toString().padStart(2, '0')}-${endHour.toString().padStart(2, '0')}`;
+			
+			chartData.push({
+				label,
+				value: 0,
+				date: `${todayString}-${hour}`
+			});
+		}
+		
+		return chartData;
 	}
 
 	private getWeekChartData(): ChartDataPoint[] {
@@ -154,42 +195,74 @@ export class PeriodDataService {
 	}
 
 	private getMonthChartData(): ChartDataPoint[] {
-		const monthData = this.getCurrentMonthData();
+		const currentDate = new Date();
+		const currentYear = currentDate.getFullYear();
+		const currentMonth = currentDate.getMonth() + 1;
+		const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+		const pluginData = this.dataStorage.getData();
 		
-		return monthData.map(([dateString, count]) => {
-			const date = new Date(dateString);
+		const chartData: ChartDataPoint[] = [];
+		
+		// 5日単位でグループ化
+		for (let startDay = 1; startDay <= daysInMonth; startDay += 5) {
+			const endDay = Math.min(startDay + 4, daysInMonth);
+			let totalCount = 0;
 			
-			return {
-				label: `${date.getDate()}日`,
-				value: Math.max(0, count),
-				date: dateString
-			};
-		});
+			// 5日間の合計を計算
+			for (let day = startDay; day <= endDay; day++) {
+				const dateKey = `${currentYear}-${currentMonth.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+				const dayCount = pluginData?.dailyStats?.[dateKey] || 0;
+				totalCount += Math.max(0, dayCount);
+			}
+			
+			const label = startDay === endDay ? `${startDay}日` : `${startDay}-${endDay}日`;
+			
+			chartData.push({
+				label,
+				value: totalCount,
+				date: `${currentYear}-${currentMonth.toString().padStart(2, '0')}-${startDay.toString().padStart(2, '0')}`
+			});
+		}
+		
+		return chartData;
 	}
 
 	private getYearChartData(): ChartDataPoint[] {
-		const yearData = this.getCurrentYearData();
-		const monthlyData = new Map<string, number>();
-
-		// 月別に集計
-		yearData.forEach(([dateString, count]) => {
-			const date = new Date(dateString);
-			const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-			const currentTotal = monthlyData.get(monthKey) || 0;
-			monthlyData.set(monthKey, currentTotal + Math.max(0, count));
-		});
-
-		// チャートデータに変換
-		return Array.from(monthlyData.entries())
-			.sort(([a], [b]) => a.localeCompare(b))
-			.map(([monthKey, total]) => {
-				const [year, month] = monthKey.split('-');
-				return {
-					label: `${parseInt(month)}月`,
-					value: total,
-					date: monthKey
-				};
+		const currentYear = new Date().getFullYear();
+		const pluginData = this.dataStorage.getData();
+		const chartData: ChartDataPoint[] = [];
+		
+		// 3ヶ月単位でグループ化（四半期）
+		const quarters = [
+			{ months: [1, 2, 3], label: 'Q1 (1-3月)' },
+			{ months: [4, 5, 6], label: 'Q2 (4-6月)' },
+			{ months: [7, 8, 9], label: 'Q3 (7-9月)' },
+			{ months: [10, 11, 12], label: 'Q4 (10-12月)' }
+		];
+		
+		quarters.forEach(quarter => {
+			let quarterTotal = 0;
+			
+			quarter.months.forEach(month => {
+				const monthPrefix = `${currentYear}-${month.toString().padStart(2, '0')}`;
+				
+				if (pluginData?.dailyStats) {
+					Object.entries(pluginData.dailyStats).forEach(([dateString, count]) => {
+						if (dateString.startsWith(monthPrefix)) {
+							quarterTotal += Math.max(0, count);
+						}
+					});
+				}
 			});
+			
+			chartData.push({
+				label: quarter.label,
+				value: quarterTotal,
+				date: `${currentYear}-${quarter.months[0].toString().padStart(2, '0')}`
+			});
+		});
+		
+		return chartData;
 	}
 
 	private getCurrentWeekData(): Array<[string, number]> {

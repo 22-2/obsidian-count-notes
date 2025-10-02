@@ -23,7 +23,7 @@
 		"types": [
 			"node",
 			"obsidian-typings",
-			"vitest/globals"
+			"jest"
 		]
 	},
 	"include": [
