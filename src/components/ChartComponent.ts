@@ -86,6 +86,9 @@ export class ChartComponent {
 					backgroundColor: colors.positiveColor,
 					borderColor: colors.positiveBorder,
 					borderWidth: 2,
+					// バーの幅を最大限活用
+					categoryPercentage: 0.9,
+					barPercentage: 0.8,
 				},
 			],
 		};
@@ -104,6 +107,14 @@ export class ChartComponent {
 			options: {
 				responsive: true,
 				maintainAspectRatio: false,
+				layout: {
+					padding: {
+						top: 30, // 上部のデータラベル用のスペースを確保
+						left: 10,
+						right: 10,
+						bottom: 10,
+					},
+				},
 				interaction: {
 					intersect: false,
 					mode: "index",
@@ -180,6 +191,9 @@ export class ChartComponent {
 				color: colors.gridColor,
 				lineWidth: 1,
 			},
+			// 横幅を最大限活用するための設定
+			categoryPercentage: 0.9, // カテゴリ全体の幅の90%を使用
+			barPercentage: 0.8, // バー自体の幅の80%を使用
 		};
 
 		// 期間タイプに応じてティック数を制限
@@ -251,10 +265,13 @@ export class ChartComponent {
 									ctx.font = "bold 11px sans-serif";
 									ctx.textAlign = "center";
 									ctx.textBaseline = "bottom";
+									
+									// バーの上部から十分な距離を取ってラベルを配置
+									const labelY = Math.max(bar.y - 8, chart.chartArea.top + 15);
 									ctx.fillText(
 										value.toLocaleString(),
 										bar.x,
-										bar.y - 5
+										labelY
 									);
 								}
 							});
