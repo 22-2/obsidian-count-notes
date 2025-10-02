@@ -368,6 +368,18 @@ class CountNovelHome extends ItemView {
 			text: `${streak}日`,
 			cls: "count-novels-summary-value count-novels-streak",
 		});
+
+		// 1日の平均を計算・表示
+		const dailyAverage = this.calculateDailyAverage();
+		const dailyAverageEl = summaryContent.createDiv("count-novels-summary-item");
+		dailyAverageEl.createEl("span", {
+			text: "1日の平均: ",
+			cls: "count-novels-summary-label",
+		});
+		dailyAverageEl.createEl("span", {
+			text: `${dailyAverage.toLocaleString()}文字`,
+			cls: "count-novels-summary-value",
+		});
 	}
 
 	/**
@@ -452,6 +464,46 @@ class CountNovelHome extends ItemView {
 		}
 
 		return streak;
+	}
+
+	/**
+	 * 1日の平均執筆文字数を計算する機能
+	 * 今月の執筆日数で今月の合計文字数を割って平均を算出
+	 */
+	private calculateDailyAverage(): number {
+		const pluginData = this.plugin.dataStorage.getData();
+		if (!pluginData || !pluginData.dailyStats) {
+			return 0;
+		}
+
+		const currentDate = new Date();
+		const currentYear = currentDate.getFullYear();
+		const currentMonth = currentDate.getMonth() + 1;
+		const monthPrefix = `${currentYear}-${currentMonth
+			.toString()
+			.padStart(2, "0")}`;
+
+		let monthlyTotal = 0;
+		let writingDays = 0;
+
+		for (const [date, characterDiff] of Object.entries(
+			pluginData.dailyStats
+		)) {
+			if (date.startsWith(monthPrefix)) {
+				// 正の値のみを合計（執筆文字数のみ、削除は除外）
+				if (characterDiff > 0) {
+					monthlyTotal += characterDiff;
+					writingDays++;
+				}
+			}
+		}
+
+		// 執筆日数が0の場合は0を返す
+		if (writingDays === 0) {
+			return 0;
+		}
+
+		return Math.round(monthlyTotal / writingDays);
 	}
 
 	/**
