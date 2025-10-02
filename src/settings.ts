@@ -3,6 +3,7 @@ import type CountNovelsPlugin from "./main";
 
 export interface CountNovelsSettings {
 	logLevel: any;
+	trackingTag: string;
 }
 export class CountNovelsSettingTab extends PluginSettingTab {
 	constructor(public plugin: CountNovelsPlugin) {
@@ -25,9 +26,23 @@ export class CountNovelsSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 			});
+
+		new Setting(this.containerEl)
+			.setName("Tracking Tag")
+			.setDesc("Tag used to identify files for character counting (default: novel)")
+			.addText((text) => {
+				text
+					.setPlaceholder("novel")
+					.setValue(this.plugin.settings.trackingTag)
+					.onChange(async (value) => {
+						this.plugin.settings.trackingTag = value || "novel";
+						await this.plugin.saveSettings();
+					});
+			});
 	}
 }
 
 export const DEFAULT_SETTINGS: CountNovelsSettings = {
 	logLevel: "debug",
+	trackingTag: "novel",
 };
