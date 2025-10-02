@@ -3,9 +3,9 @@ name: Obsidian E2E Test
 on:
     workflow_dispatch:
     push:
-        branches: ["main", "multiple-sandbox"]
+        branches: ["main"]
     pull_request:
-        branches: ["main", "multiple-sandbox"]
+        branches: ["main"]
 
 jobs:
     e2e-test:
@@ -111,6 +111,11 @@ jobs:
 
             - name: Run Playwright example tests
               run: pnpm run test:e2e:example
+              env:
+                  DEBUG: "pw:browser"
+
+            - name: Run Data Collection E2E tests
+              run: pnpm run test:e2e:data-collection
               env:
                   DEBUG: "pw:browser"
 

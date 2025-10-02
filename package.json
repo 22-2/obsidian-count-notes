@@ -12,6 +12,7 @@
 		"repomix": "pnpm dlx repomix && code ./repomix-output.md",
 		"test:e2e": "playwright test",
 		"test:e2e:example": "pnpm playwright test e2e/specs/setup/example.spec.ts --project=chromium",
+		"test:e2e:data-collection": "pnpm playwright test e2e/specs/data-collection.spec.ts --project=chromium",
 		"test:e2e:debug": "cross-env DEBUG=pw:api playwright test"
 	},
 	"keywords": [],
