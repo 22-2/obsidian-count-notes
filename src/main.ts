@@ -1,24 +1,25 @@
+import {
+	BarController,
+	BarElement,
+	CategoryScale,
+	Chart,
+	Legend,
+	LinearScale,
+	Title,
+	Tooltip,
+	type ChartConfiguration,
+	type ChartData,
+} from "chart.js";
 import log from "loglevel";
 import { ItemView, Plugin, WorkspaceLeaf } from "obsidian";
 import { DataStorage } from "./data";
 import { DataCollectionService } from "./services/dataCollection";
 import {
 	CountNovelsSettingTab,
-	type CountNovelsSettings,
 	DEFAULT_SETTINGS,
+	type CountNovelsSettings,
 } from "./settings";
 import { VIEW_TYPE_COUNT_NOVEL } from "./utils/constants";
-import {
-	Chart,
-	CategoryScale,
-	LinearScale,
-	BarElement,
-	Title,
-	Tooltip,
-	Legend,
-	type ChartConfiguration,
-	type ChartData,
-} from "chart.js";
 
 export default class CountNovelsPlugin extends Plugin {
 	settings: CountNovelsSettings = DEFAULT_SETTINGS;
@@ -36,14 +37,11 @@ export default class CountNovelsPlugin extends Plugin {
 		await this.loadSettings();
 		this.addSettingTab(new CountNovelsSettingTab(this));
 		this.togglLoggersBy(this.settings.logLevel);
-		this.registerView(
-			VIEW_TYPE_COUNT_NOVEL,
-			(leaf) => {
-				const view = new CountNovelHome(leaf);
-				view.setPlugin(this);
-				return view;
-			}
-		);
+		this.registerView(VIEW_TYPE_COUNT_NOVEL, (leaf) => {
+			const view = new CountNovelHome(leaf);
+			view.setPlugin(this);
+			return view;
+		});
 		this.addCommand({
 			id: "open-count-novels-home",
 			name: "Open Count Novels Home",
@@ -169,7 +167,7 @@ class CountNovelHome extends ItemView {
 		super(leaf);
 		// プラグインインスタンスは後で設定される
 		this.plugin = null as any;
-		
+
 		// Chart.jsライブラリを初期化
 		this.initializeChartJS();
 	}
@@ -188,6 +186,7 @@ class CountNovelHome extends ItemView {
 	private initializeChartJS(): void {
 		// Chart.jsに必要なコンポーネントを登録
 		Chart.register(
+			BarController,
 			CategoryScale,
 			LinearScale,
 			BarElement,
@@ -224,19 +223,20 @@ class CountNovelHome extends ItemView {
 	 */
 	private renderView(): void {
 		this.containerEl.empty();
-		
+
 		// メインコンテナ
 		const mainContainer = this.containerEl.createDiv("count-novels-main");
-		
+
 		// ヘッダー
-		const header = mainContainer.createEl("h1", { 
-			text: "執筆進捗", 
-			cls: "count-novels-header" 
+		const header = mainContainer.createEl("h1", {
+			text: "執筆進捗",
+			cls: "count-novels-header",
 		});
 
 		// データの存在確認
 		const pluginData = this.plugin.dataStorage.getData();
-		const hasData = pluginData && Object.keys(pluginData.dailyStats).length > 0;
+		const hasData =
+			pluginData && Object.keys(pluginData.dailyStats).length > 0;
 
 		if (!hasData) {
 			// 要件3.5: データが存在しない場合のメッセージ表示
@@ -253,15 +253,15 @@ class CountNovelHome extends ItemView {
 	 */
 	private renderNoDataMessage(container: HTMLElement): void {
 		const noDataContainer = container.createDiv("count-novels-no-data");
-		
+
 		noDataContainer.createEl("p", {
 			text: "データがありません",
-			cls: "count-novels-no-data-message"
+			cls: "count-novels-no-data-message",
 		});
-		
+
 		noDataContainer.createEl("p", {
 			text: "執筆を開始すると、ここに進捗が表示されます。",
-			cls: "count-novels-no-data-subtitle"
+			cls: "count-novels-no-data-subtitle",
 		});
 	}
 
@@ -272,23 +272,25 @@ class CountNovelHome extends ItemView {
 	private renderStatsStructure(container: HTMLElement): void {
 		// サマリーセクション
 		const summarySection = container.createDiv("count-novels-summary");
-		summarySection.createEl("h2", { 
-			text: "サマリー", 
-			cls: "count-novels-section-title" 
+		summarySection.createEl("h2", {
+			text: "サマリー",
+			cls: "count-novels-section-title",
 		});
-		
+
 		// サマリー表示機能を実装
 		this.renderSummary(summarySection);
 
 		// グラフセクション
 		const chartSection = container.createDiv("count-novels-chart");
-		chartSection.createEl("h2", { 
-			text: "月間グラフ", 
-			cls: "count-novels-section-title" 
+		chartSection.createEl("h2", {
+			text: "月間グラフ",
+			cls: "count-novels-section-title",
 		});
-		
-		const chartContent = chartSection.createDiv("count-novels-chart-content");
-		
+
+		const chartContent = chartSection.createDiv(
+			"count-novels-chart-content"
+		);
+
 		// Chart.jsグラフ表示機能を実装
 		this.renderChart(chartContent);
 	}
@@ -299,18 +301,22 @@ class CountNovelHome extends ItemView {
 	 * 要件3.3: 継続日数（ストリーク）を表示
 	 */
 	private renderSummary(container: HTMLElement): void {
-		const summaryContent = container.createDiv("count-novels-summary-content");
-		
+		const summaryContent = container.createDiv(
+			"count-novels-summary-content"
+		);
+
 		// 今月の合計執筆文字数を計算・表示
 		const monthlyTotal = this.calculateMonthlyTotal();
-		const monthlyTotalEl = summaryContent.createDiv("count-novels-summary-item");
+		const monthlyTotalEl = summaryContent.createDiv(
+			"count-novels-summary-item"
+		);
 		monthlyTotalEl.createEl("span", {
 			text: "今月の執筆文字数: ",
-			cls: "count-novels-summary-label"
+			cls: "count-novels-summary-label",
 		});
 		monthlyTotalEl.createEl("span", {
 			text: `${monthlyTotal.toLocaleString()}文字`,
-			cls: "count-novels-summary-value"
+			cls: "count-novels-summary-value",
 		});
 
 		// 継続日数（ストリーク）を計算・表示
@@ -318,11 +324,11 @@ class CountNovelHome extends ItemView {
 		const streakEl = summaryContent.createDiv("count-novels-summary-item");
 		streakEl.createEl("span", {
 			text: "継続日数: ",
-			cls: "count-novels-summary-label"
+			cls: "count-novels-summary-label",
 		});
 		streakEl.createEl("span", {
 			text: `${streak}日`,
-			cls: "count-novels-summary-value count-novels-streak"
+			cls: "count-novels-summary-value count-novels-streak",
 		});
 	}
 
@@ -339,10 +345,14 @@ class CountNovelHome extends ItemView {
 		const currentDate = new Date();
 		const currentYear = currentDate.getFullYear();
 		const currentMonth = currentDate.getMonth() + 1; // getMonth()は0ベースなので+1
-		const monthPrefix = `${currentYear}-${currentMonth.toString().padStart(2, '0')}`;
+		const monthPrefix = `${currentYear}-${currentMonth
+			.toString()
+			.padStart(2, "0")}`;
 
 		let monthlyTotal = 0;
-		for (const [date, characterDiff] of Object.entries(pluginData.dailyStats)) {
+		for (const [date, characterDiff] of Object.entries(
+			pluginData.dailyStats
+		)) {
 			if (date.startsWith(monthPrefix)) {
 				// 正の値のみを合計（執筆文字数のみ、削除は除外）
 				if (characterDiff > 0) {
@@ -411,8 +421,8 @@ class CountNovelHome extends ItemView {
 	 */
 	private formatDateString(date: Date): string {
 		const year = date.getFullYear();
-		const month = (date.getMonth() + 1).toString().padStart(2, '0');
-		const day = date.getDate().toString().padStart(2, '0');
+		const month = (date.getMonth() + 1).toString().padStart(2, "0");
+		const day = date.getDate().toString().padStart(2, "0");
 		return `${year}-${month}-${day}`;
 	}
 
@@ -430,7 +440,7 @@ class CountNovelHome extends ItemView {
 
 		// キャンバス要素を作成
 		const canvas = container.createEl("canvas", {
-			cls: "count-novels-chart-canvas"
+			cls: "count-novels-chart-canvas",
 		});
 
 		// グラフデータを生成
@@ -456,9 +466,11 @@ class CountNovelHome extends ItemView {
 	 * 要件4.4: 各日の執筆文字数をバーで表示
 	 * 要件4.5: マイナス値がある場合は削除された文字数として異なる色で表示
 	 */
-	private createChartConfiguration(chartData: ChartData<'bar'>): ChartConfiguration<'bar'> {
+	private createChartConfiguration(
+		chartData: ChartData<"bar">
+	): ChartConfiguration<"bar"> {
 		return {
-			type: 'bar',
+			type: "bar",
 			data: chartData,
 			options: {
 				responsive: true,
@@ -466,60 +478,62 @@ class CountNovelHome extends ItemView {
 				plugins: {
 					title: {
 						display: true,
-						text: '今月の執筆進捗',
-						color: 'var(--text-normal)'
+						text: "今月の執筆進捗",
+						color: "var(--text-normal)",
 					},
 					legend: {
 						display: true,
 						labels: {
-							color: 'var(--text-normal)'
-						}
+							color: "var(--text-normal)",
+						},
 					},
 					tooltip: {
 						callbacks: {
 							label: (context) => {
 								const value = context.parsed.y;
-								const label = context.dataset.label || '';
+								const label = context.dataset.label || "";
 								return `${label}: ${value.toLocaleString()}文字`;
-							}
-						}
-					}
+							},
+						},
+					},
 				},
 				scales: {
 					x: {
 						// 要件4.2: X軸には日付（1日、2日、3日...）を表示
 						title: {
 							display: true,
-							text: '日付',
-							color: 'var(--text-normal)'
+							text: "日付",
+							color: "var(--text-normal)",
 						},
 						ticks: {
-							color: 'var(--text-muted)'
+							color: "var(--text-muted)",
 						},
 						grid: {
-							color: 'var(--background-modifier-border)'
-						}
+							color: "var(--background-modifier-border)",
+						},
 					},
 					y: {
 						// 要件4.3: Y軸には文字数を表示
 						title: {
 							display: true,
-							text: '文字数',
-							color: 'var(--text-normal)'
+							text: "文字数",
+							color: "var(--text-normal)",
 						},
 						ticks: {
-							color: 'var(--text-muted)',
-							callback: function(value) {
-								return typeof value === 'number' ? value.toLocaleString() : value;
-							}
+							color: "var(--text-muted)",
+							callback: function (value) {
+								return typeof value === "number"
+									? value.toLocaleString()
+									: value;
+							},
 						},
 						grid: {
-							color: 'var(--background-modifier-border)'
+							color: "var(--background-modifier-border)",
 						},
-						beginAtZero: true
-					}
-				}
-			}
+						beginAtZero: true,
+					},
+				},
+			},
 		};
 	}
 
@@ -529,13 +543,13 @@ class CountNovelHome extends ItemView {
 	 * 要件4.5: マイナス値がある場合は削除された文字数として異なる色で表示
 	 * 要件4.6: 月が変わる場合は新しい月のデータでグラフを更新
 	 */
-	private generateChartData(): ChartData<'bar'> {
+	private generateChartData(): ChartData<"bar"> {
 		const pluginData = this.plugin.dataStorage.getData();
-		
+
 		if (!pluginData || !pluginData.dailyStats) {
 			return {
 				labels: [],
-				datasets: []
+				datasets: [],
 			};
 		}
 
@@ -543,7 +557,9 @@ class CountNovelHome extends ItemView {
 		const currentDate = new Date();
 		const currentYear = currentDate.getFullYear();
 		const currentMonth = currentDate.getMonth() + 1;
-		const monthPrefix = `${currentYear}-${currentMonth.toString().padStart(2, '0')}`;
+		const monthPrefix = `${currentYear}-${currentMonth
+			.toString()
+			.padStart(2, "0")}`;
 
 		// 月の日数を取得
 		const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
@@ -557,7 +573,7 @@ class CountNovelHome extends ItemView {
 			const dayString = day.toString();
 			labels.push(`${dayString}日`);
 
-			const dateKey = `${monthPrefix}-${dayString.padStart(2, '0')}`;
+			const dateKey = `${monthPrefix}-${dayString.padStart(2, "0")}`;
 			const dayStats = pluginData.dailyStats[dateKey] || 0;
 
 			// 要件4.4, 4.5: 正の値と負の値を分けて表示
@@ -574,20 +590,20 @@ class CountNovelHome extends ItemView {
 			labels,
 			datasets: [
 				{
-					label: '執筆文字数',
+					label: "執筆文字数",
 					data: positiveData,
-					backgroundColor: 'rgba(54, 162, 235, 0.8)',
-					borderColor: 'rgba(54, 162, 235, 1)',
-					borderWidth: 1
+					backgroundColor: "rgba(54, 162, 235, 0.8)",
+					borderColor: "rgba(54, 162, 235, 1)",
+					borderWidth: 1,
 				},
 				{
-					label: '削除文字数',
+					label: "削除文字数",
 					data: negativeData,
-					backgroundColor: 'rgba(255, 99, 132, 0.8)',
-					borderColor: 'rgba(255, 99, 132, 1)',
-					borderWidth: 1
-				}
-			]
+					backgroundColor: "rgba(255, 99, 132, 0.8)",
+					borderColor: "rgba(255, 99, 132, 1)",
+					borderWidth: 1,
+				},
+			],
 		};
 	}
 
@@ -598,7 +614,7 @@ class CountNovelHome extends ItemView {
 		container.empty();
 		container.createEl("p", {
 			text: "グラフの読み込みに失敗しました。テキスト形式で統計を表示します。",
-			cls: "count-novels-placeholder"
+			cls: "count-novels-placeholder",
 		});
 
 		// 簡単なテキストベースの統計表示
@@ -607,23 +623,29 @@ class CountNovelHome extends ItemView {
 			const currentDate = new Date();
 			const currentYear = currentDate.getFullYear();
 			const currentMonth = currentDate.getMonth() + 1;
-			const monthPrefix = `${currentYear}-${currentMonth.toString().padStart(2, '0')}`;
+			const monthPrefix = `${currentYear}-${currentMonth
+				.toString()
+				.padStart(2, "0")}`;
 
 			const monthlyStats = Object.entries(pluginData.dailyStats)
 				.filter(([date]) => date.startsWith(monthPrefix))
 				.sort(([a], [b]) => a.localeCompare(b));
 
 			if (monthlyStats.length > 0) {
-				const statsContainer = container.createDiv("count-novels-text-stats");
+				const statsContainer = container.createDiv(
+					"count-novels-text-stats"
+				);
 				statsContainer.createEl("h3", { text: "今月の執筆記録" });
 
 				monthlyStats.forEach(([date, count]) => {
-					const day = date.split('-')[2];
-					const statItem = statsContainer.createDiv("count-novels-stat-item");
+					const day = date.split("-")[2];
+					const statItem = statsContainer.createDiv(
+						"count-novels-stat-item"
+					);
 					statItem.createEl("span", { text: `${day}日: ` });
-					statItem.createEl("span", { 
+					statItem.createEl("span", {
 						text: `${count.toLocaleString()}文字`,
-						cls: count >= 0 ? "positive" : "negative"
+						cls: count >= 0 ? "positive" : "negative",
 					});
 				});
 			}
@@ -643,14 +665,18 @@ class CountNovelHome extends ItemView {
 	 * データ更新時にサマリーを再描画する機能
 	 */
 	public refreshSummary(): void {
-		const summarySection = this.containerEl.querySelector('.count-novels-summary');
+		const summarySection = this.containerEl.querySelector(
+			".count-novels-summary"
+		);
 		if (summarySection) {
 			// 既存のサマリーコンテンツをクリア
-			const summaryContent = summarySection.querySelector('.count-novels-summary-content');
+			const summaryContent = summarySection.querySelector(
+				".count-novels-summary-content"
+			);
 			if (summaryContent) {
 				summaryContent.remove();
 			}
-			
+
 			// サマリーを再描画
 			this.renderSummary(summarySection as HTMLElement);
 		}
@@ -661,11 +687,13 @@ class CountNovelHome extends ItemView {
 	 * データ更新時にグラフを再描画する機能を実装
 	 */
 	public refreshChart(): void {
-		const chartSection = this.containerEl.querySelector('.count-novels-chart-content');
+		const chartSection = this.containerEl.querySelector(
+			".count-novels-chart-content"
+		);
 		if (chartSection && this.chartInstance) {
 			// 新しいデータを生成
 			const newChartData = this.generateChartData();
-			
+
 			// チャートデータを更新
 			this.chartInstance.data = newChartData;
 			this.chartInstance.update();
