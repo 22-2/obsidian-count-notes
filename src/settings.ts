@@ -2,7 +2,7 @@ import { PluginSettingTab, Setting } from "obsidian";
 import type CountNovelsPlugin from "./main";
 
 export interface CountNovelsSettings {
-	logLevel: any;
+	logLevel: "debug" | "info";
 	trackingTag: string;
 }
 export class CountNovelsSettingTab extends PluginSettingTab {
@@ -29,10 +29,11 @@ export class CountNovelsSettingTab extends PluginSettingTab {
 
 		new Setting(this.containerEl)
 			.setName("Tracking Tag")
-			.setDesc("Tag used to identify files for character counting (default: novel)")
+			.setDesc(
+				"Tag used to identify files for character counting (default: novel)"
+			)
 			.addText((text) => {
-				text
-					.setPlaceholder("novel")
+				text.setPlaceholder("novel")
 					.setValue(this.plugin.settings.trackingTag)
 					.onChange(async (value) => {
 						this.plugin.settings.trackingTag = value || "novel";

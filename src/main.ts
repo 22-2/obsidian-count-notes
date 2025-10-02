@@ -1,5 +1,6 @@
 import log from "loglevel";
 import { ItemView, Plugin, WorkspaceLeaf } from "obsidian";
+import { DataStorage } from "./data";
 import {
 	CountNovelsSettingTab,
 	type CountNovelsSettings,
@@ -9,8 +10,12 @@ import { VIEW_TYPE_COUNT_NOVEL } from "./utils/constants";
 
 export default class CountNovelsPlugin extends Plugin {
 	settings: CountNovelsSettings = DEFAULT_SETTINGS;
+	dataStorage!: DataStorage;
 
 	async onload() {
+		// データストレージを初期化
+		this.dataStorage = new DataStorage(this);
+
 		await this.loadSettings();
 		this.addSettingTab(new CountNovelsSettingTab(this));
 		this.togglLoggersBy(this.settings.logLevel);
@@ -28,6 +33,9 @@ export default class CountNovelsPlugin extends Plugin {
 				});
 			},
 		});
+
+		// プラグインデータを読み込み
+		await this.dataStorage.loadData();
 	}
 
 	onunload() {}
@@ -45,15 +53,19 @@ export default class CountNovelsPlugin extends Plugin {
 	}
 
 	async loadSettings() {
+		// データストレージから設定を読み込み
+		const pluginData = await this.dataStorage.loadData();
 		this.settings = Object.assign(
 			{},
 			DEFAULT_SETTINGS,
-			await this.loadData()
+			pluginData.settings
 		);
 	}
 
 	async saveSettings() {
-		await this.saveData(this.settings);
+		// 設定をデータストレージに保存
+		this.dataStorage.updateData({ settings: this.settings });
+		await this.dataStorage.saveData();
 	}
 }
 
