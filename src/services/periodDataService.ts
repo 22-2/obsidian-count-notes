@@ -138,7 +138,7 @@ export class PeriodDataService {
 		// 4時間単位で6つのスロット（0-4, 4-8, 8-12, 12-16, 16-20, 20-24）
 		for (let hour = 0; hour < 24; hour += 4) {
 			const endHour = hour + 4;
-			const label = `${hour.toString().padStart(2, '0')}-${endHour.toString().padStart(2, '0')}`;
+			const label = `${hour}h`;
 			
 			// 現在時刻に基づいて値を分散（簡易実装）
 			let value = 0;
@@ -167,7 +167,7 @@ export class PeriodDataService {
 		
 		for (let hour = 0; hour < 24; hour += 4) {
 			const endHour = hour + 4;
-			const label = `${hour.toString().padStart(2, '0')}-${endHour.toString().padStart(2, '0')}`;
+			const label = `${hour}h`;
 			
 			chartData.push({
 				label,
@@ -187,7 +187,7 @@ export class PeriodDataService {
 			const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
 			
 			return {
-				label: `${date.getDate()}日(${dayOfWeek})`,
+				label: `${dayOfWeek}`,
 				value: Math.max(0, count),
 				date: dateString
 			};
@@ -234,10 +234,10 @@ export class PeriodDataService {
 		
 		// 3ヶ月単位でグループ化（四半期）
 		const quarters = [
-			{ months: [1, 2, 3], label: 'Q1 (1-3月)' },
-			{ months: [4, 5, 6], label: 'Q2 (4-6月)' },
-			{ months: [7, 8, 9], label: 'Q3 (7-9月)' },
-			{ months: [10, 11, 12], label: 'Q4 (10-12月)' }
+			{ months: [1, 2, 3], label: 'Q1' },
+			{ months: [4, 5, 6], label: 'Q2' },
+			{ months: [7, 8, 9], label: 'Q3' },
+			{ months: [10, 11, 12], label: 'Q4' }
 		];
 		
 		quarters.forEach(quarter => {

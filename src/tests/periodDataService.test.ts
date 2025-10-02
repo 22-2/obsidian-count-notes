@@ -76,12 +76,12 @@ describe('PeriodDataService', () => {
 			const chartData = service.getChartData('day');
 			
 			expect(chartData).toHaveLength(6);
-			expect(chartData[0].label).toBe('00-04');
-			expect(chartData[1].label).toBe('04-08');
-			expect(chartData[2].label).toBe('08-12');
-			expect(chartData[3].label).toBe('12-16');
-			expect(chartData[4].label).toBe('16-20');
-			expect(chartData[5].label).toBe('20-24');
+			expect(chartData[0].label).toBe('0h');
+			expect(chartData[1].label).toBe('4h');
+			expect(chartData[2].label).toBe('8h');
+			expect(chartData[3].label).toBe('12h');
+			expect(chartData[4].label).toBe('16h');
+			expect(chartData[5].label).toBe('20h');
 		});
 
 		test('should handle empty data for day view', () => {
@@ -104,7 +104,7 @@ describe('PeriodDataService', () => {
 			expect(chartData).toHaveLength(7);
 			// 各日のラベルが適切な形式であることを確認
 			chartData.forEach(point => {
-				expect(point.label).toMatch(/^\d+日\([日月火水木金土]\)$/);
+				expect(point.label).toMatch(/^[日月火水木金土]$/);
 			});
 		});
 	});
@@ -140,10 +140,10 @@ describe('PeriodDataService', () => {
 			const chartData = service.getChartData('year');
 			
 			expect(chartData).toHaveLength(4);
-			expect(chartData[0].label).toBe('Q1 (1-3月)');
-			expect(chartData[1].label).toBe('Q2 (4-6月)');
-			expect(chartData[2].label).toBe('Q3 (7-9月)');
-			expect(chartData[3].label).toBe('Q4 (10-12月)');
+			expect(chartData[0].label).toBe('Q1');
+			expect(chartData[1].label).toBe('Q2');
+			expect(chartData[2].label).toBe('Q3');
+			expect(chartData[3].label).toBe('Q4');
 		});
 
 		test('should calculate correct quarterly totals', () => {
