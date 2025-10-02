@@ -10,7 +10,7 @@
 /* ヘッダー */
 .count-novels-header {
 	color: var(--text-normal);
-	border-bottom: 2px solid var(--background-modifier-border);
+	border-bottom: var(--size-2-1) solid var(--background-modifier-border);
 	padding-bottom: var(--size-4-2);
 	margin-bottom: var(--size-4-5);
 }
@@ -18,7 +18,7 @@
 /* データなしメッセージ */
 .count-novels-no-data {
 	text-align: center;
-	padding: 40px var(--size-4-5);
+	padding: var(--size-4-10) var(--size-4-5);
 	color: var(--text-muted);
 }
 
@@ -63,7 +63,7 @@
 	align-items: center;
 	padding: var(--size-4-2);
 	background-color: var(--background-primary);
-	border-radius: 6px;
+	border-radius: var(--size-2-3);
 	border: 1px solid var(--background-modifier-border);
 	flex: 1;
 	text-align: center;
