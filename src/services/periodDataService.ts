@@ -1,5 +1,5 @@
 import type { DataStorage } from "../data";
-import type { ChartDataPoint, PeriodStats, PeriodType } from "../types/period";
+import type { ChartDataPoint, PeriodStats, PeriodType } from "../schemas";
 
 export class PeriodDataService {
 	constructor(private dataStorage: DataStorage) {}

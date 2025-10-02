@@ -1,42 +1,10 @@
-import { z } from "zod";
 import type CountNovelsPlugin from "./main";
-
-/**
- * 設定のzodスキーマ
- */
-const CountNovelsSettingsSchema = z.object({
-	logLevel: z.enum(["debug", "info", "warn", "error", "silent"]), // log.LogLevelDescは複雑な型なのでanyで許可
-	trackingTag: z.string().min(1), // 空文字列は許可しない
-});
-
-/**
- * 日付文字列のバリデーション（YYYY-MM-DD形式）
- */
-const DateStringSchema = z
-	.string()
-	.regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format");
-
-/**
- * プラグインデータのzodスキーマ
- * data.jsonに保存される全データを定義
- */
-export const PluginDataSchema = z.object({
-	settings: CountNovelsSettingsSchema,
-	lastTotalCharacterCount: z.number().int().min(0), // 非負の整数
-	dailyStats: z.record(DateStringSchema, z.number().int()), // "YYYY-MM-DD" -> 整数の文字数差分
-});
-
-/**
- * 日付バリデーション用のヘルパー関数
- */
-export const validateDateString = (date: string): boolean => {
-	return DateStringSchema.safeParse(date).success;
-};
-
-/**
- * プラグインデータ型（zodスキーマから自動生成）
- */
-export type PluginData = z.infer<typeof PluginDataSchema>;
+import {
+	PluginDataSchema,
+	validateDateString,
+	type PluginData,
+	type PeriodType,
+} from "./schemas";
 
 /**
  * データストレージクラス
@@ -124,6 +92,9 @@ export class DataStorage {
 		return {
 			settings: this.plugin.settings,
 			lastTotalCharacterCount: 0,
+			lastViewState: {
+				period: "month",
+			},
 			dailyStats: {},
 		};
 	}
@@ -221,5 +192,21 @@ export class DataStorage {
 		}
 
 		this.data.lastTotalCharacterCount = count;
+	}
+
+	/**
+	 * ビュー状態を更新する（バリデーション付き）
+	 */
+	updateViewState(period: PeriodType): void {
+		// 期間のバリデーション
+		if (!["day", "week", "month", "year"].includes(period)) {
+			throw new Error(`Invalid period: ${period}`);
+		}
+
+		if (!this.data) {
+			this.data = this.createInitialData();
+		}
+
+		this.data.lastViewState = { period };
 	}
 }

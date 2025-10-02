@@ -11,7 +11,7 @@ import {
 	type ChartData,
 } from "chart.js";
 import annotationPlugin from "chartjs-plugin-annotation";
-import type { ChartDataPoint, PeriodType } from "../types/period";
+import type { ChartDataPoint, PeriodType } from "../schemas";
 
 export class ChartComponent {
 	private container: HTMLElement;

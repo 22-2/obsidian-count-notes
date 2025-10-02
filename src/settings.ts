@@ -1,10 +1,6 @@
 import { PluginSettingTab, Setting } from "obsidian";
 import type CountNovelsPlugin from "./main";
-
-export interface CountNovelsSettings {
-	logLevel: "debug" | "info";
-	trackingTag: string;
-}
+import { type CountNovelsSettings } from "./schemas";
 export class CountNovelsSettingTab extends PluginSettingTab {
 	constructor(public plugin: CountNovelsPlugin) {
 		super(plugin.app, plugin);
@@ -43,7 +39,4 @@ export class CountNovelsSettingTab extends PluginSettingTab {
 	}
 }
 
-export const DEFAULT_SETTINGS: CountNovelsSettings = {
-	logLevel: "debug",
-	trackingTag: "novel",
-};
+// DEFAULT_SETTINGSはschemas.tsに移動

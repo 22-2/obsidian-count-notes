@@ -1,13 +1,13 @@
 import log from "loglevel";
 import { Plugin } from "obsidian";
-import { CountNovelHome } from "./CountNovelView";
+import { CountNovelView } from "./CountNovelView";
 import { DataStorage } from "./data";
 import { DataCollectionService } from "./services/dataCollection";
+import { CountNovelsSettingTab } from "./settings";
 import {
-	CountNovelsSettingTab,
 	DEFAULT_SETTINGS,
 	type CountNovelsSettings,
-} from "./settings";
+} from "./schemas";
 import { VIEW_TYPE_COUNT_NOVEL } from "./utils/constants";
 
 export default class CountNovelsPlugin extends Plugin {
@@ -36,7 +36,7 @@ export default class CountNovelsPlugin extends Plugin {
 	private async setupUI(): Promise<void> {
 		this.addSettingTab(new CountNovelsSettingTab(this));
 		this.registerView(VIEW_TYPE_COUNT_NOVEL, (leaf) => {
-			const view = new CountNovelHome(leaf);
+			const view = new CountNovelView(leaf);
 			view.setPlugin(this);
 			return view;
 		});
@@ -59,12 +59,21 @@ export default class CountNovelsPlugin extends Plugin {
 
 	private async openCountNovelsView(): Promise<void> {
 		try {
-			const leaf = this.app.workspace.getRightLeaf(false)!;
-			await leaf.setViewState({
-				type: VIEW_TYPE_COUNT_NOVEL,
-				active: true,
-			});
-			this.app.workspace.revealLeaf(leaf);
+			// 既存のビューがあるかチェック
+			const existingLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_COUNT_NOVEL)[0];
+			
+			if (existingLeaf) {
+				// 既存のビューをアクティブにする
+				this.app.workspace.revealLeaf(existingLeaf);
+			} else {
+				// 新しいビューを作成
+				const leaf = this.app.workspace.getRightLeaf(false)!;
+				await leaf.setViewState({
+					type: VIEW_TYPE_COUNT_NOVEL,
+					active: true,
+				});
+				this.app.workspace.revealLeaf(leaf);
+			}
 		} catch (error) {
 			console.error("Count Novels: Failed to open view:", error);
 		}

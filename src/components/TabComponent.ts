@@ -1,5 +1,5 @@
-import type { PeriodType } from "../types/period";
-import { PERIOD_CONFIGS } from "../types/period";
+import type { PeriodType } from "../schemas";
+import { PERIOD_CONFIGS } from "../schemas";
 
 export class TabComponent {
 	private container: HTMLElement;

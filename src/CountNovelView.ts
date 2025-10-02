@@ -1,19 +1,29 @@
-import { ItemView, WorkspaceLeaf } from "obsidian";
+import { ItemView, WorkspaceLeaf, type ViewStateResult } from "obsidian";
 import { ChartComponent } from "./components/ChartComponent";
 import { StatsComponent } from "./components/StatsComponent";
 import { TabComponent } from "./components/TabComponent";
 import type CountNovelsPlugin from "./main";
 import { PeriodDataService } from "./services/periodDataService";
-import type { PeriodType } from "./types/period";
+import type { PeriodType, CountNovelViewState } from "./schemas";
 import { VIEW_TYPE_COUNT_NOVEL } from "./utils/constants";
 
-export class CountNovelHome extends ItemView {
+// CountNovelViewStateはschemas.tsに移動
+// Obsidian API互換性のための拡張
+export interface CountNovelViewStateCompat extends CountNovelViewState {
+	// DONT REMOVE THIS LINE
+	// COMPAT FOR OBSIDIAN API
+	[key: string]: any;
+}
+
+export class CountNovelView extends ItemView {
 	private plugin!: CountNovelsPlugin;
 	private tabComponent?: TabComponent;
 	private statsComponent?: StatsComponent;
 	private chartComponent?: ChartComponent;
 	private periodDataService?: PeriodDataService;
 	private currentPeriod: PeriodType = "month";
+
+	navigation = true;
 
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
@@ -32,8 +42,26 @@ export class CountNovelHome extends ItemView {
 		return "Count Novels Home";
 	}
 
+	setState(
+		state: CountNovelViewStateCompat,
+		result: ViewStateResult
+	): Promise<void> {
+		// data.jsonを使うのでstate APIは使用しない
+		return super.setState(state, result);
+	}
+
+	getState(): CountNovelViewStateCompat {
+		// data.jsonを使うのでstate APIは使用しない
+		return {
+			period: this.getCurrentPeriod(),
+		};
+	}
+
 	async onOpen() {
 		try {
+			// data.jsonから前回のビュー状態を復元
+			this.loadViewStateFromData();
+			console.log("onOpen called, restored period:", this.currentPeriod);
 			this.renderView();
 		} catch (error) {
 			console.error("Count Novels: Failed to open view:", error);
@@ -43,6 +71,8 @@ export class CountNovelHome extends ItemView {
 
 	async onClose() {
 		try {
+			// ビュー状態をdata.jsonに保存
+			await this.saveViewStateToData();
 			this.cleanup();
 		} catch (error) {
 			console.error("Count Novels: Error during cleanup:", error);
@@ -133,6 +163,7 @@ export class CountNovelHome extends ItemView {
 	}
 
 	private createTabComponent(container: HTMLElement): void {
+		console.log("Creating tab component with period:", this.currentPeriod);
 		this.tabComponent = new TabComponent(
 			container,
 			(periodType: PeriodType) => this.onTabChange(periodType),
@@ -152,6 +183,8 @@ export class CountNovelHome extends ItemView {
 		try {
 			this.currentPeriod = periodType;
 			this.updateContent();
+			// タブ変更時にもdata.jsonに保存
+			this.saveViewStateToData();
 		} catch (error) {
 			console.error("Count Novels: Failed to change tab:", error);
 		}
@@ -221,14 +254,42 @@ export class CountNovelHome extends ItemView {
 
 	public setPeriod(periodType: PeriodType): void {
 		try {
+			this.currentPeriod = periodType;
 			if (this.tabComponent) {
 				this.tabComponent.setActiveTab(periodType);
-			} else {
-				this.currentPeriod = periodType;
-				this.updateContent();
 			}
+			console.log("Period set to:", this.currentPeriod);
+			this.updateContent();
 		} catch (error) {
 			console.error("Count Novels: Failed to set period:", error);
+		}
+	}
+
+	/**
+	 * data.jsonから前回のビュー状態を読み込む
+	 */
+	private loadViewStateFromData(): void {
+		try {
+			const pluginData = this.plugin.dataStorage.getData();
+			if (pluginData?.lastViewState?.period) {
+				this.currentPeriod = pluginData.lastViewState.period;
+				console.log("Loaded view state from data.json:", this.currentPeriod);
+			}
+		} catch (error) {
+			console.error("Count Novels: Failed to load view state from data:", error);
+		}
+	}
+
+	/**
+	 * 現在のビュー状態をdata.jsonに保存する
+	 */
+	private async saveViewStateToData(): Promise<void> {
+		try {
+			this.plugin.dataStorage.updateViewState(this.currentPeriod);
+			await this.plugin.dataStorage.saveData();
+			console.log("Saved view state to data.json:", this.currentPeriod);
+		} catch (error) {
+			console.error("Count Novels: Failed to save view state to data:", error);
 		}
 	}
 }

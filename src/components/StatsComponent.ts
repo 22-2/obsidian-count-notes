@@ -1,4 +1,4 @@
-import type { PeriodStats, PeriodType } from "../types/period";
+import type { PeriodStats, PeriodType } from "../schemas";
 
 export class StatsComponent {
 	private container: HTMLElement;
