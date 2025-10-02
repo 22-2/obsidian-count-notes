@@ -6,15 +6,20 @@ import {
 	type CountNovelsSettings,
 	DEFAULT_SETTINGS,
 } from "./settings";
+import { DataCollectionService } from "./services/dataCollection";
 import { VIEW_TYPE_COUNT_NOVEL } from "./utils/constants";
 
 export default class CountNovelsPlugin extends Plugin {
 	settings: CountNovelsSettings = DEFAULT_SETTINGS;
 	dataStorage!: DataStorage;
+	dataCollectionService!: DataCollectionService;
 
 	async onload() {
 		// データストレージを初期化
 		this.dataStorage = new DataStorage(this);
+		
+		// データ収集サービスを初期化
+		this.dataCollectionService = new DataCollectionService(this);
 
 		await this.loadSettings();
 		this.addSettingTab(new CountNovelsSettingTab(this));
@@ -34,8 +39,22 @@ export default class CountNovelsPlugin extends Plugin {
 			},
 		});
 
+		// デバッグ用コマンド：手動でデータ収集を実行
+		this.addCommand({
+			id: "collect-data-manually",
+			name: "Collect Data Manually (Debug)",
+			callback: async () => {
+				console.log("Count Novels: Manual data collection triggered");
+				await this.collectData();
+				console.log("Count Novels: Manual data collection completed");
+			},
+		});
+
 		// プラグインデータを読み込み
 		await this.dataStorage.loadData();
+
+		// 要件2.1: Obsidian起動時にデータ収集を実行
+		await this.dataCollectionService.collectData();
 	}
 
 	onunload() {}
@@ -66,6 +85,14 @@ export default class CountNovelsPlugin extends Plugin {
 		// 設定をデータストレージに保存
 		this.dataStorage.updateData({ settings: this.settings });
 		await this.dataStorage.saveData();
+	}
+
+	/**
+	 * データ収集を実行する（公開メソッド）
+	 * 要件2.1, 2.2: 指定タグを持つ全ファイルの合計文字数を計算し、差分を記録
+	 */
+	async collectData(): Promise<void> {
+		await this.dataCollectionService.collectData();
 	}
 }
 
