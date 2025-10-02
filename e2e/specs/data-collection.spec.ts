@@ -61,6 +61,9 @@ It should not be counted.`,
 			await obsPage.expectFileExists(file.path);
 		}
 
+		// Wait for Obsidian's metadata cache to update
+		await vault.window.waitForTimeout(500);
+
 		// 3. Get plugin instance and trigger data collection
 		const dataCollectionResult = await vault.window.evaluate(
 			async (pluginId) => {
@@ -93,9 +96,7 @@ It should not be counted.`,
 		// Calculate expected character count manually
 		const expectedCount = testFiles
 			.filter(
-				(file) =>
-					file.content.includes("novel") ||
-					file.content.includes("tags: [novel]")
+				(file) => file.path === "novel1.md" || file.path === "novel2.md"
 			)
 			.reduce((sum, file) => sum + file.content.length, 0);
 
@@ -106,6 +107,8 @@ It should not be counted.`,
 		// 5. Verify daily stats were recorded
 		const today = new Date().toISOString().split("T")[0];
 		expect(dataCollectionResult!.dailyStats).toHaveProperty(today);
+		// The value should be the total count, as it's the first collection after startup (where count was 0)
+		expect(dataCollectionResult!.dailyStats[today]).toBe(expectedCount);
 
 		// 6. Test file scanning functionality directly
 		const scanResult = await vault.window.evaluate(async (pluginId) => {
@@ -148,6 +151,9 @@ It should not be counted.`,
 			await obsPage.deleteFile(filePath);
 		}
 
+		// Wait for metadata cache to process deletions
+		await vault.window.waitForTimeout(500);
+
 		// Trigger data collection on empty vault
 		const result = await vault.window.evaluate(async (pluginId) => {
 			const plugin = app.plugins.getPlugin(pluginId) as any;
@@ -188,6 +194,9 @@ Brief content.`;
 
 		await obsPage.writeFile("test-novel.md", initialContent);
 
+		// Wait for metadata cache to update
+		await vault.window.waitForTimeout(500);
+
 		// 2. Get initial count
 		const initialResult = await vault.window.evaluate(async (pluginId) => {
 			const plugin = app.plugins.getPlugin(pluginId) as any;
@@ -208,6 +217,9 @@ The story has been expanded with additional paragraphs and details.
 More characters means higher count in our tracking system.`;
 
 		await obsPage.writeFile("test-novel.md", expandedContent);
+
+		// Wait for metadata cache to update
+		await vault.window.waitForTimeout(500);
 
 		// 4. Get updated count
 		const updatedResult = await vault.window.evaluate(async (pluginId) => {

@@ -201,7 +201,8 @@ export class DataStorage {
 			this.data = this.createInitialData();
 		}
 
-		this.data.dailyStats[date] = characterDiff;
+		const existingValue = this.data.dailyStats[date] || 0;
+		this.data.dailyStats[date] = existingValue + characterDiff;
 	}
 
 	/**
