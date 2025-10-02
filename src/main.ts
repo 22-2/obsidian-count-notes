@@ -196,6 +196,42 @@ class CountNovelHome extends ItemView {
 		);
 	}
 
+	/**
+	 * 現在のテーマに応じた色を取得する
+	 */
+	private getThemeColors() {
+		// Obsidianのテーマを判定（ダークテーマかライトテーマか）
+		const isDarkTheme = document.body.classList.contains('theme-dark');
+		
+		if (isDarkTheme) {
+			// ダークテーマの色（現在の設定）
+			return {
+				textPrimary: '#ffffff',
+				textSecondary: '#cccccc',
+				gridColor: '#444444',
+				tooltipBg: 'rgba(0, 0, 0, 0.8)',
+				tooltipBorder: '#666666',
+				positiveColor: 'rgba(100, 200, 100, 0.7)',
+				positiveBorder: 'rgba(100, 200, 100, 1)',
+				negativeColor: 'rgba(255, 140, 140, 0.7)',
+				negativeBorder: 'rgba(255, 140, 140, 1)',
+			};
+		} else {
+			// ライトテーマの色
+			return {
+				textPrimary: '#222222',
+				textSecondary: '#666666',
+				gridColor: '#e0e0e0',
+				tooltipBg: 'rgba(255, 255, 255, 0.95)',
+				tooltipBorder: '#cccccc',
+				positiveColor: 'rgba(40, 160, 40, 0.7)',
+				positiveBorder: 'rgba(40, 160, 40, 1)',
+				negativeColor: 'rgba(220, 60, 60, 0.7)',
+				negativeBorder: 'rgba(220, 60, 60, 1)',
+			};
+		}
+	}
+
 	getViewType() {
 		return VIEW_TYPE_COUNT_NOVEL;
 	}
@@ -469,6 +505,8 @@ class CountNovelHome extends ItemView {
 	private createChartConfiguration(
 		chartData: ChartData<"bar">
 	): ChartConfiguration<"bar"> {
+		// テーマに応じた色を取得
+		const colors = this.getThemeColors();
 		return {
 			type: "bar",
 			data: chartData,
@@ -479,7 +517,7 @@ class CountNovelHome extends ItemView {
 					title: {
 						display: true,
 						text: "今月の執筆進捗",
-						color: "#ffffff",
+						color: colors.textPrimary,
 						font: {
 							size: 16,
 							weight: "bold",
@@ -488,7 +526,7 @@ class CountNovelHome extends ItemView {
 					legend: {
 						display: true,
 						labels: {
-							color: "#ffffff",
+							color: colors.textPrimary,
 							font: {
 								size: 12,
 							},
@@ -497,10 +535,10 @@ class CountNovelHome extends ItemView {
 						},
 					},
 					tooltip: {
-						backgroundColor: "rgba(0, 0, 0, 0.8)",
-						titleColor: "#ffffff",
-						bodyColor: "#ffffff",
-						borderColor: "#666666",
+						backgroundColor: colors.tooltipBg,
+						titleColor: colors.textPrimary,
+						bodyColor: colors.textPrimary,
+						borderColor: colors.tooltipBorder,
 						borderWidth: 1,
 						callbacks: {
 							label: (context) => {
@@ -517,20 +555,20 @@ class CountNovelHome extends ItemView {
 						title: {
 							display: true,
 							text: "日付",
-							color: "#ffffff",
+							color: colors.textPrimary,
 							font: {
 								size: 12,
 								weight: "bold",
 							},
 						},
 						ticks: {
-							color: "#cccccc",
+							color: colors.textSecondary,
 							font: {
 								size: 11,
 							},
 						},
 						grid: {
-							color: "#444444",
+							color: colors.gridColor,
 							lineWidth: 1,
 						},
 					},
@@ -539,14 +577,14 @@ class CountNovelHome extends ItemView {
 						title: {
 							display: true,
 							text: "文字数",
-							color: "#ffffff",
+							color: colors.textPrimary,
 							font: {
 								size: 12,
 								weight: "bold",
 							},
 						},
 						ticks: {
-							color: "#cccccc",
+							color: colors.textSecondary,
 							font: {
 								size: 11,
 							},
@@ -557,7 +595,7 @@ class CountNovelHome extends ItemView {
 							},
 						},
 						grid: {
-							color: "#444444",
+							color: colors.gridColor,
 							lineWidth: 1,
 						},
 						beginAtZero: true,
@@ -574,6 +612,8 @@ class CountNovelHome extends ItemView {
 	 * 要件4.6: 月が変わる場合は新しい月のデータでグラフを更新
 	 */
 	private generateChartData(): ChartData<"bar"> {
+		// テーマに応じた色を取得
+		const colors = this.getThemeColors();
 		const pluginData = this.plugin.dataStorage.getData();
 
 		if (!pluginData || !pluginData.dailyStats) {
@@ -622,15 +662,15 @@ class CountNovelHome extends ItemView {
 				{
 					label: "執筆文字数",
 					data: positiveData,
-					backgroundColor: "rgba(100, 200, 100, 0.7)",
-					borderColor: "rgba(100, 200, 100, 1)",
+					backgroundColor: colors.positiveColor,
+					borderColor: colors.positiveBorder,
 					borderWidth: 2,
 				},
 				{
 					label: "削除文字数",
 					data: negativeData,
-					backgroundColor: "rgba(255, 140, 140, 0.7)",
-					borderColor: "rgba(255, 140, 140, 1)",
+					backgroundColor: colors.negativeColor,
+					borderColor: colors.negativeBorder,
 					borderWidth: 2,
 				},
 			],
