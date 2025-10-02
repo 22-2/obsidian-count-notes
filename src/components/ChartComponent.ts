@@ -97,6 +97,10 @@ export class ChartComponent {
 			options: {
 				responsive: true,
 				maintainAspectRatio: false,
+				interaction: {
+					intersect: false,
+					mode: 'index'
+				},
 				plugins: this.createChartPlugins(colors, averageValue),
 				scales: this.createChartScales(colors, chartData, periodType)
 			},
@@ -159,12 +163,13 @@ export class ChartComponent {
 	}
 
 	private createXAxisConfig(colors: any, periodType: PeriodType) {
-		const baseConfig = {
+		const config: any = {
+			type: 'category',
 			ticks: {
 				color: colors.textSecondary,
 				font: { size: 11 },
-				maxTicksLimit: this.getMaxTicksLimit(periodType),
-				callback: undefined as any
+				maxRotation: 0,
+				minRotation: 0
 			},
 			grid: {
 				color: colors.gridColor,
@@ -172,27 +177,13 @@ export class ChartComponent {
 			}
 		};
 
-		// 期間タイプに応じた特別な処理
-		switch (periodType) {
-			case 'day':
-				// 4時間単位なので全て表示
-				baseConfig.ticks.maxTicksLimit = undefined;
-				break;
-			case 'week':
-				// 7日なので全て表示
-				baseConfig.ticks.maxTicksLimit = undefined;
-				break;
-			case 'month':
-				// 5日単位のグループなので全て表示
-				baseConfig.ticks.maxTicksLimit = undefined;
-				break;
-			case 'year':
-				// 4四半期なので全て表示
-				baseConfig.ticks.maxTicksLimit = undefined;
-				break;
+		// 期間タイプに応じてティック数を制限
+		const maxTicks = this.getMaxTicksLimit(periodType);
+		if (maxTicks) {
+			config.ticks.maxTicksLimit = maxTicks;
 		}
 
-		return baseConfig;
+		return config;
 	}
 
 	private getMaxTicksLimit(periodType: PeriodType): number | undefined {
