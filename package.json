@@ -29,6 +29,7 @@
     },
     "dependencies": {
         "chart.js": "^4.5.0",
-        "loglevel": "^1.9.2"
+        "loglevel": "^1.9.2",
+        "zod": "^4.1.11"
     }
 }
