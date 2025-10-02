@@ -3,8 +3,8 @@ import { ChartComponent } from "./components/ChartComponent";
 import { StatsComponent } from "./components/StatsComponent";
 import { TabComponent } from "./components/TabComponent";
 import type CountNovelsPlugin from "./main";
+import type { CountNovelViewState, PeriodType } from "./schemas";
 import { PeriodDataService } from "./services/periodDataService";
-import type { PeriodType, CountNovelViewState } from "./schemas";
 import { VIEW_TYPE_COUNT_NOVEL } from "./utils/constants";
 
 // CountNovelViewStateはschemas.tsに移動
@@ -61,7 +61,7 @@ export class CountNovelView extends ItemView {
 		try {
 			// data.jsonから前回のビュー状態を復元
 			this.loadViewStateFromData();
-			console.log("onOpen called, restored period:", this.currentPeriod);
+			// console.log("onOpen called, restored period:", this.currentPeriod);
 			this.renderView();
 		} catch (error) {
 			console.error("Count Novels: Failed to open view:", error);
@@ -163,7 +163,7 @@ export class CountNovelView extends ItemView {
 	}
 
 	private createTabComponent(container: HTMLElement): void {
-		console.log("Creating tab component with period:", this.currentPeriod);
+		// console.log("Creating tab component with period:", this.currentPeriod);
 		this.tabComponent = new TabComponent(
 			container,
 			(periodType: PeriodType) => this.onTabChange(periodType),
@@ -258,7 +258,7 @@ export class CountNovelView extends ItemView {
 			if (this.tabComponent) {
 				this.tabComponent.setActiveTab(periodType);
 			}
-			console.log("Period set to:", this.currentPeriod);
+			// console.log("Period set to:", this.currentPeriod);
 			this.updateContent();
 		} catch (error) {
 			console.error("Count Novels: Failed to set period:", error);
@@ -273,10 +273,13 @@ export class CountNovelView extends ItemView {
 			const pluginData = this.plugin.dataStorage.getData();
 			if (pluginData?.lastViewState?.period) {
 				this.currentPeriod = pluginData.lastViewState.period;
-				console.log("Loaded view state from data.json:", this.currentPeriod);
+				// console.log("Loaded view state from data.json:", this.currentPeriod);
 			}
 		} catch (error) {
-			console.error("Count Novels: Failed to load view state from data:", error);
+			console.error(
+				"Count Novels: Failed to load view state from data:",
+				error
+			);
 		}
 	}
 
@@ -287,9 +290,12 @@ export class CountNovelView extends ItemView {
 		try {
 			this.plugin.dataStorage.updateViewState(this.currentPeriod);
 			await this.plugin.dataStorage.saveData();
-			console.log("Saved view state to data.json:", this.currentPeriod);
+			// console.log("Saved view state to data.json:", this.currentPeriod);
 		} catch (error) {
-			console.error("Count Novels: Failed to save view state to data:", error);
+			console.error(
+				"Count Novels: Failed to save view state to data:",
+				error
+			);
 		}
 	}
 }
