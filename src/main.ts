@@ -602,6 +602,34 @@ class CountNovelHome extends ItemView {
 					},
 				},
 			},
+			// カスタムプラグインで棒グラフの頂点に数値を表示
+			plugins: [
+				{
+					id: 'dataLabels',
+					afterDatasetsDraw: (chart: any) => {
+						const ctx = chart.ctx;
+						chart.data.datasets.forEach((dataset: any, datasetIndex: number) => {
+							const meta = chart.getDatasetMeta(datasetIndex);
+							if (!meta.hidden) {
+								meta.data.forEach((bar: any, index: number) => {
+									const value = dataset.data[index];
+									if (value > 0) { // 0より大きい値のみ表示
+										ctx.fillStyle = colors.textPrimary;
+										ctx.font = 'bold 11px sans-serif';
+										ctx.textAlign = 'center';
+										ctx.textBaseline = 'bottom';
+										
+										const x = bar.x;
+										const y = bar.y - 5; // バーの上に少し余白を空けて表示
+										
+										ctx.fillText(value.toLocaleString(), x, y);
+									}
+								});
+							}
+						});
+					}
+				}
+			],
 		};
 	}
 
