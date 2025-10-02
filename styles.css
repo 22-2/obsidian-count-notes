@@ -159,3 +159,46 @@
 	justify-content: center;
 	min-height: 300px;
 }
+/* タブセクション */
+.count-novels-tabs-section {
+	margin-bottom: var(--size-4-5);
+}
+
+.count-novels-tabs {
+	display: flex;
+	width: 100%;
+	background-color: var(--background-secondary);
+	border-radius: var(--size-4-2);
+	padding: var(--size-4-1);
+	gap: var(--size-4-1);
+}
+
+.count-novels-tab-button {
+	flex: 1;
+	padding: var(--size-4-2) var(--size-4-3);
+	background-color: transparent;
+	border: none;
+	border-radius: var(--size-4-1);
+	color: var(--text-muted);
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	text-align: center;
+	font-size: 0.9em;
+	box-shadow: none !important;
+}
+
+.count-novels-tab-button:hover {
+	background-color: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.count-novels-tab-button.active {
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+	font-weight: 600;
+}
+
+.count-novels-tab-button.active:hover {
+	background-color: var(--interactive-accent-hover);
+}
