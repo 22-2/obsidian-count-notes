@@ -81,7 +81,7 @@ export class ChartComponent {
 			labels: chartData.map((point) => point.label),
 			datasets: [
 				{
-					label: "執筆文字数",
+					label: "",
 					data: chartData.map((point) => point.value),
 					backgroundColor: colors.positiveColor,
 					borderColor: colors.positiveBorder,
@@ -118,13 +118,7 @@ export class ChartComponent {
 	private createChartPlugins(colors: any, averageValue: number) {
 		return {
 			legend: {
-				display: true,
-				labels: {
-					color: colors.textPrimary,
-					font: { size: 12 },
-					usePointStyle: true,
-					padding: 20,
-				},
+				display: false,
 			},
 			tooltip: {
 				backgroundColor: colors.tooltipBg,
