@@ -479,15 +479,29 @@ class CountNovelHome extends ItemView {
 					title: {
 						display: true,
 						text: "今月の執筆進捗",
-						color: "var(--text-normal)",
+						color: "#ffffff",
+						font: {
+							size: 16,
+							weight: "bold",
+						},
 					},
 					legend: {
 						display: true,
 						labels: {
-							color: "var(--text-normal)",
+							color: "#ffffff",
+							font: {
+								size: 12,
+							},
+							usePointStyle: true,
+							padding: 20,
 						},
 					},
 					tooltip: {
+						backgroundColor: "rgba(0, 0, 0, 0.8)",
+						titleColor: "#ffffff",
+						bodyColor: "#ffffff",
+						borderColor: "#666666",
+						borderWidth: 1,
 						callbacks: {
 							label: (context) => {
 								const value = context.parsed.y;
@@ -503,13 +517,21 @@ class CountNovelHome extends ItemView {
 						title: {
 							display: true,
 							text: "日付",
-							color: "var(--text-normal)",
+							color: "#ffffff",
+							font: {
+								size: 12,
+								weight: "bold",
+							},
 						},
 						ticks: {
-							color: "var(--text-muted)",
+							color: "#cccccc",
+							font: {
+								size: 11,
+							},
 						},
 						grid: {
-							color: "var(--background-modifier-border)",
+							color: "#444444",
+							lineWidth: 1,
 						},
 					},
 					y: {
@@ -517,10 +539,17 @@ class CountNovelHome extends ItemView {
 						title: {
 							display: true,
 							text: "文字数",
-							color: "var(--text-normal)",
+							color: "#ffffff",
+							font: {
+								size: 12,
+								weight: "bold",
+							},
 						},
 						ticks: {
-							color: "var(--text-muted)",
+							color: "#cccccc",
+							font: {
+								size: 11,
+							},
 							callback: function (value) {
 								return typeof value === "number"
 									? value.toLocaleString()
@@ -528,7 +557,8 @@ class CountNovelHome extends ItemView {
 							},
 						},
 						grid: {
-							color: "var(--background-modifier-border)",
+							color: "#444444",
+							lineWidth: 1,
 						},
 						beginAtZero: true,
 					},
@@ -592,16 +622,16 @@ class CountNovelHome extends ItemView {
 				{
 					label: "執筆文字数",
 					data: positiveData,
-					backgroundColor: "rgba(54, 162, 235, 0.8)",
-					borderColor: "rgba(54, 162, 235, 1)",
-					borderWidth: 1,
+					backgroundColor: "rgba(100, 200, 100, 0.7)",
+					borderColor: "rgba(100, 200, 100, 1)",
+					borderWidth: 2,
 				},
 				{
 					label: "削除文字数",
 					data: negativeData,
-					backgroundColor: "rgba(255, 99, 132, 0.8)",
-					borderColor: "rgba(255, 99, 132, 1)",
-					borderWidth: 1,
+					backgroundColor: "rgba(255, 140, 140, 0.7)",
+					borderColor: "rgba(255, 140, 140, 1)",
+					borderWidth: 2,
 				},
 			],
 		};
