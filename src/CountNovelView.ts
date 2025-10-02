@@ -45,7 +45,7 @@ export class CountNovelHome extends ItemView {
 
 	private getThemeColors() {
 		const isDarkTheme = document.body.classList.contains("theme-dark");
-		
+
 		const darkTheme = {
 			textPrimary: "#ffffff",
 			textSecondary: "#cccccc",
@@ -96,22 +96,13 @@ export class CountNovelHome extends ItemView {
 	private renderView(): void {
 		this.containerEl.empty();
 		const mainContainer = this.containerEl.createDiv("count-novels-main");
-		
-		this.createHeader(mainContainer);
-		
+
 		const hasData = this.hasValidData();
 		if (!hasData) {
 			this.renderNoDataMessage(mainContainer);
 		} else {
 			this.renderStatsStructure(mainContainer);
 		}
-	}
-
-	private createHeader(container: HTMLElement): void {
-		container.createEl("h1", {
-			text: "執筆進捗",
-			cls: "count-novels-header",
-		});
 	}
 
 	private hasValidData(): boolean {
@@ -140,33 +131,47 @@ export class CountNovelHome extends ItemView {
 
 	private createSummarySection(container: HTMLElement): void {
 		const summarySection = container.createDiv("count-novels-summary");
-		summarySection.createEl("h2", {
-			text: "サマリー",
-			cls: "count-novels-section-title",
-		});
 		this.renderSummary(summarySection);
 	}
 
 	private createChartSection(container: HTMLElement): void {
 		const chartSection = container.createDiv("count-novels-chart");
-		chartSection.createEl("h2", {
-			text: "月間グラフ",
-			cls: "count-novels-section-title",
-		});
-		const chartContent = chartSection.createDiv("count-novels-chart-content");
+		const chartContent = chartSection.createDiv(
+			"count-novels-chart-content"
+		);
 		this.renderChart(chartContent);
 	}
 
 	private renderSummary(container: HTMLElement): void {
-		const summaryContent = container.createDiv("count-novels-summary-content");
-		
+		const summaryContent = container.createDiv(
+			"count-novels-summary-content"
+		);
+
 		const stats = this.calculateAllStats();
-		this.createSummaryItem(summaryContent, "今月の執筆文字数", `${stats.monthlyTotal.toLocaleString()}文字`);
-		this.createSummaryItem(summaryContent, "継続日数", `${stats.streak}日`, "count-novels-streak");
-		this.createSummaryItem(summaryContent, "1日の平均", `${stats.dailyAverage.toLocaleString()}文字`);
+		this.createSummaryItem(
+			summaryContent,
+			"1日の平均",
+			`${stats.dailyAverage.toLocaleString()}文字`
+		);
+		this.createSummaryItem(
+			summaryContent,
+			"月の合計",
+			`${stats.monthlyTotal.toLocaleString()}文字`
+		);
+		this.createSummaryItem(
+			summaryContent,
+			"継続日数",
+			`${stats.streak}日`,
+			"count-novels-streak"
+		);
 	}
 
-	private createSummaryItem(container: HTMLElement, label: string, value: string, extraClass?: string): void {
+	private createSummaryItem(
+		container: HTMLElement,
+		label: string,
+		value: string,
+		extraClass?: string
+	): void {
 		const item = container.createDiv("count-novels-summary-item");
 		item.createEl("span", {
 			text: `${label}: `,
@@ -200,8 +205,9 @@ export class CountNovelHome extends ItemView {
 		}
 
 		const monthPrefix = this.getCurrentMonthPrefix();
-		return Object.entries(pluginData.dailyStats)
-			.filter(([date]) => date.startsWith(monthPrefix));
+		return Object.entries(pluginData.dailyStats).filter(([date]) =>
+			date.startsWith(monthPrefix)
+		);
 	}
 
 	private calculateMonthlyTotal(): number {
@@ -264,13 +270,18 @@ export class CountNovelHome extends ItemView {
 
 	private calculateDailyAverage(): number {
 		const monthlyData = this.getMonthlyData();
-		const writingDays = monthlyData.filter(([, characterDiff]) => characterDiff > 0);
-		
+		const writingDays = monthlyData.filter(
+			([, characterDiff]) => characterDiff > 0
+		);
+
 		if (writingDays.length === 0) {
 			return 0;
 		}
 
-		const monthlyTotal = writingDays.reduce((total, [, characterDiff]) => total + characterDiff, 0);
+		const monthlyTotal = writingDays.reduce(
+			(total, [, characterDiff]) => total + characterDiff,
+			0
+		);
 		return Math.round(monthlyTotal / writingDays.length);
 	}
 
@@ -286,7 +297,7 @@ export class CountNovelHome extends ItemView {
 
 	private renderChart(container: HTMLElement): void {
 		this.destroyExistingChart();
-		
+
 		const canvas = container.createEl("canvas", {
 			cls: "count-novels-chart-canvas",
 		});
@@ -308,10 +319,12 @@ export class CountNovelHome extends ItemView {
 		}
 	}
 
-	private createChartConfiguration(chartData: ChartData<"bar">): ChartConfiguration<"bar"> {
+	private createChartConfiguration(
+		chartData: ChartData<"bar">
+	): ChartConfiguration<"bar"> {
 		const colors = this.getThemeColors();
 		const averageValue = this.calculateAverageFromChartData(chartData);
-		
+
 		return {
 			type: "bar",
 			data: chartData,
@@ -450,7 +463,7 @@ export class CountNovelHome extends ItemView {
 	private calculateAverageFromChartData(chartData: ChartData<"bar">): number {
 		let totalValue = 0;
 		let count = 0;
-		
+
 		chartData.datasets.forEach((dataset) => {
 			dataset.data.forEach((value) => {
 				if (typeof value === "number" && value > 0) {
@@ -459,13 +472,13 @@ export class CountNovelHome extends ItemView {
 				}
 			});
 		});
-		
+
 		return count > 0 ? totalValue / count : 0;
 	}
 
 	private getMaxValueFromChartData(chartData: ChartData<"bar">): number {
 		let maxValue = 0;
-		
+
 		chartData.datasets.forEach((dataset) => {
 			dataset.data.forEach((value) => {
 				if (typeof value === "number") {
@@ -473,7 +486,7 @@ export class CountNovelHome extends ItemView {
 				}
 			});
 		});
-		
+
 		return maxValue;
 	}
 
@@ -483,13 +496,13 @@ export class CountNovelHome extends ItemView {
 		const rawStep = maxValue / 5;
 		const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
 		const normalized = rawStep / magnitude;
-		
+
 		let niceStep;
 		if (normalized <= 1) niceStep = 1;
 		else if (normalized <= 2) niceStep = 2;
 		else if (normalized <= 5) niceStep = 5;
 		else niceStep = 10;
-		
+
 		return niceStep * magnitude;
 	}
 
@@ -498,21 +511,27 @@ export class CountNovelHome extends ItemView {
 			id: "dataLabels",
 			afterDatasetsDraw: (chart: any) => {
 				const ctx = chart.ctx;
-				chart.data.datasets.forEach((dataset: any, datasetIndex: number) => {
-					const meta = chart.getDatasetMeta(datasetIndex);
-					if (!meta.hidden) {
-						meta.data.forEach((bar: any, index: number) => {
-							const value = dataset.data[index];
-							if (value > 0) {
-								ctx.fillStyle = colors.textPrimary;
-								ctx.font = "bold 11px sans-serif";
-								ctx.textAlign = "center";
-								ctx.textBaseline = "bottom";
-								ctx.fillText(value.toLocaleString(), bar.x, bar.y - 5);
-							}
-						});
+				chart.data.datasets.forEach(
+					(dataset: any, datasetIndex: number) => {
+						const meta = chart.getDatasetMeta(datasetIndex);
+						if (!meta.hidden) {
+							meta.data.forEach((bar: any, index: number) => {
+								const value = dataset.data[index];
+								if (value > 0) {
+									ctx.fillStyle = colors.textPrimary;
+									ctx.font = "bold 11px sans-serif";
+									ctx.textAlign = "center";
+									ctx.textBaseline = "bottom";
+									ctx.fillText(
+										value.toLocaleString(),
+										bar.x,
+										bar.y - 5
+									);
+								}
+							});
+						}
 					}
-				});
+				);
 			},
 		};
 	}
@@ -525,7 +544,8 @@ export class CountNovelHome extends ItemView {
 			return { labels: [], datasets: [] };
 		}
 
-		const { labels, positiveData, negativeData } = this.processMonthlyChartData();
+		const { labels, positiveData, negativeData } =
+			this.processMonthlyChartData();
 
 		return {
 			labels,
@@ -633,16 +653,22 @@ export class CountNovelHome extends ItemView {
 	}
 
 	public refreshSummary(): void {
-		const summarySection = this.containerEl.querySelector(".count-novels-summary");
+		const summarySection = this.containerEl.querySelector(
+			".count-novels-summary"
+		);
 		if (summarySection) {
-			const summaryContent = summarySection.querySelector(".count-novels-summary-content");
+			const summaryContent = summarySection.querySelector(
+				".count-novels-summary-content"
+			);
 			summaryContent?.remove();
 			this.renderSummary(summarySection as HTMLElement);
 		}
 	}
 
 	public refreshChart(): void {
-		const chartSection = this.containerEl.querySelector(".count-novels-chart-content");
+		const chartSection = this.containerEl.querySelector(
+			".count-novels-chart-content"
+		);
 		if (chartSection && this.chartInstance) {
 			const newChartData = this.generateChartData();
 			this.chartInstance.data = newChartData;

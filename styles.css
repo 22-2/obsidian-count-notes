@@ -82,10 +82,6 @@
 	font-size: 1.3em;
 }
 
-.count-novels-streak {
-	color: var(--text-accent);
-}
-
 /* グラフセクション */
 .count-novels-chart {
 	margin-bottom: 20px;
