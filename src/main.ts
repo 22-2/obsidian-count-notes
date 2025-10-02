@@ -1,23 +1,24 @@
 import log from "loglevel";
 import { ItemView, Plugin, WorkspaceLeaf } from "obsidian";
 import { DataStorage } from "./data";
+import { DataCollectionService } from "./services/dataCollection";
 import {
 	CountNovelsSettingTab,
 	type CountNovelsSettings,
 	DEFAULT_SETTINGS,
 } from "./settings";
-import { DataCollectionService } from "./services/dataCollection";
 import { VIEW_TYPE_COUNT_NOVEL } from "./utils/constants";
 
 export default class CountNovelsPlugin extends Plugin {
 	settings: CountNovelsSettings = DEFAULT_SETTINGS;
 	dataStorage!: DataStorage;
 	dataCollectionService!: DataCollectionService;
+	intervalId?: number; // 定期実行用のタイマーID
 
 	async onload() {
 		// データストレージを初期化
 		this.dataStorage = new DataStorage(this);
-		
+
 		// データ収集サービスを初期化
 		this.dataCollectionService = new DataCollectionService(this);
 
@@ -55,9 +56,15 @@ export default class CountNovelsPlugin extends Plugin {
 
 		// 要件2.1: Obsidian起動時にデータ収集を実行
 		await this.dataCollectionService.collectData();
+
+		// 要件2.2: 10分間隔でデータ収集を実行する定期実行機能を実装
+		this.startPeriodicDataCollection();
 	}
 
-	onunload() {}
+	onunload() {
+		// プラグイン無効化時に定期実行を停止する機能を実装
+		this.stopPeriodicDataCollection();
+	}
 
 	togglLoggersBy(
 		level: log.LogLevelDesc,
@@ -93,6 +100,49 @@ export default class CountNovelsPlugin extends Plugin {
 	 */
 	async collectData(): Promise<void> {
 		await this.dataCollectionService.collectData();
+	}
+
+	/**
+	 * 10分間隔でデータ収集を実行する定期実行機能を開始
+	 * 要件2.2: 10分経過する THEN システムは再度合計文字数を計算し、前回との差分を記録する
+	 */
+	private startPeriodicDataCollection(): void {
+		// 既存のタイマーがあれば停止
+		this.stopPeriodicDataCollection();
+
+		// 10分間隔（600,000ミリ秒）でデータ収集を実行
+		this.registerInterval(
+			(this.intervalId = window.setInterval(async () => {
+				console.log("Count Novels: Periodic data collection triggered");
+				try {
+					await this.collectData();
+					console.log(
+						"Count Novels: Periodic data collection completed"
+					);
+				} catch (error) {
+					console.error(
+						"Count Novels: Error during periodic data collection:",
+						error
+					);
+				}
+			}, 10 * 60 * 1000))
+		); // 10分間隔
+
+		console.log(
+			"Count Novels: Periodic data collection started (10-minute interval)"
+		);
+	}
+
+	/**
+	 * 定期実行を停止する機能
+	 * プラグイン無効化時に定期実行を停止する
+	 */
+	private stopPeriodicDataCollection(): void {
+		if (this.intervalId) {
+			window.clearInterval(this.intervalId);
+			this.intervalId = undefined;
+			console.log("Count Novels: Periodic data collection stopped");
+		}
 	}
 }
 
