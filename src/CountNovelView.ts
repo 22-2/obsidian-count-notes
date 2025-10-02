@@ -16,31 +16,21 @@ import type CountNovelsPlugin from "./main";
 import { VIEW_TYPE_COUNT_NOVEL } from "./utils/constants";
 
 export class CountNovelHome extends ItemView {
-	private plugin: CountNovelsPlugin;
+	private plugin!: CountNovelsPlugin;
 	private chartInstance?: Chart;
+	private readonly CHART_HEIGHT = 400;
+	private readonly COLLECTION_INTERVAL_MINUTES = 10;
 
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
-		// プラグインインスタンスは後で設定される
-		this.plugin = null as any;
-
-		// Chart.jsライブラリを初期化
 		this.initializeChartJS();
 	}
 
-	/**
-	 * プラグインインスタンスを設定する
-	 */
 	setPlugin(plugin: CountNovelsPlugin): void {
 		this.plugin = plugin;
 	}
 
-	/**
-	 * Chart.jsライブラリを初期化する機能を実装
-	 * 要件4.1: Chart.jsを使用してバーグラフを描画する
-	 */
 	private initializeChartJS(): void {
-		// Chart.jsに必要なコンポーネントを登録
 		Chart.register(
 			BarController,
 			CategoryScale,
@@ -53,40 +43,34 @@ export class CountNovelHome extends ItemView {
 		);
 	}
 
-	/**
-	 * 現在のテーマに応じた色を取得する
-	 */
 	private getThemeColors() {
-		// Obsidianのテーマを判定（ダークテーマかライトテーマか）
 		const isDarkTheme = document.body.classList.contains("theme-dark");
+		
+		const darkTheme = {
+			textPrimary: "#ffffff",
+			textSecondary: "#cccccc",
+			gridColor: "#444444",
+			tooltipBg: "rgba(0, 0, 0, 0.8)",
+			tooltipBorder: "#666666",
+			positiveColor: "rgba(100, 200, 100, 0.7)",
+			positiveBorder: "rgba(100, 200, 100, 1)",
+			negativeColor: "rgba(255, 140, 140, 0.7)",
+			negativeBorder: "rgba(255, 140, 140, 1)",
+		};
 
-		if (isDarkTheme) {
-			// ダークテーマの色（現在の設定）
-			return {
-				textPrimary: "#ffffff",
-				textSecondary: "#cccccc",
-				gridColor: "#444444",
-				tooltipBg: "rgba(0, 0, 0, 0.8)",
-				tooltipBorder: "#666666",
-				positiveColor: "rgba(100, 200, 100, 0.7)",
-				positiveBorder: "rgba(100, 200, 100, 1)",
-				negativeColor: "rgba(255, 140, 140, 0.7)",
-				negativeBorder: "rgba(255, 140, 140, 1)",
-			};
-		} else {
-			// ライトテーマの色
-			return {
-				textPrimary: "#222222",
-				textSecondary: "#666666",
-				gridColor: "#e0e0e0",
-				tooltipBg: "rgba(255, 255, 255, 0.95)",
-				tooltipBorder: "#cccccc",
-				positiveColor: "rgba(40, 160, 40, 0.7)",
-				positiveBorder: "rgba(40, 160, 40, 1)",
-				negativeColor: "rgba(220, 60, 60, 0.7)",
-				negativeBorder: "rgba(220, 60, 60, 1)",
-			};
-		}
+		const lightTheme = {
+			textPrimary: "#222222",
+			textSecondary: "#666666",
+			gridColor: "#e0e0e0",
+			tooltipBg: "rgba(255, 255, 255, 0.95)",
+			tooltipBorder: "#cccccc",
+			positiveColor: "rgba(40, 160, 40, 0.7)",
+			positiveBorder: "rgba(40, 160, 40, 1)",
+			negativeColor: "rgba(220, 60, 60, 0.7)",
+			negativeBorder: "rgba(220, 60, 60, 1)",
+		};
+
+		return isDarkTheme ? darkTheme : lightTheme;
 	}
 
 	getViewType() {
@@ -109,41 +93,32 @@ export class CountNovelHome extends ItemView {
 		}
 	}
 
-	/**
-	 * 統計ビューの基本構造を描画
-	 * 要件3.1: システムは統計ビューを開く
-	 * 要件3.5: データが存在しない場合は「データがありません」メッセージを表示
-	 */
 	private renderView(): void {
 		this.containerEl.empty();
-
-		// メインコンテナ
 		const mainContainer = this.containerEl.createDiv("count-novels-main");
-
-		// ヘッダー
-		const header = mainContainer.createEl("h1", {
-			text: "執筆進捗",
-			cls: "count-novels-header",
-		});
-
-		// データの存在確認
-		const pluginData = this.plugin.dataStorage.getData();
-		const hasData =
-			pluginData && Object.keys(pluginData.dailyStats).length > 0;
-
+		
+		this.createHeader(mainContainer);
+		
+		const hasData = this.hasValidData();
 		if (!hasData) {
-			// 要件3.5: データが存在しない場合のメッセージ表示
 			this.renderNoDataMessage(mainContainer);
 		} else {
-			// データが存在する場合の基本構造を作成
 			this.renderStatsStructure(mainContainer);
 		}
 	}
 
-	/**
-	 * データが存在しない場合のメッセージを表示
-	 * 要件3.5: IF データが存在しない場合 THEN システムは「データがありません」メッセージを表示する
-	 */
+	private createHeader(container: HTMLElement): void {
+		container.createEl("h1", {
+			text: "執筆進捗",
+			cls: "count-novels-header",
+		});
+	}
+
+	private hasValidData(): boolean {
+		const pluginData = this.plugin.dataStorage.getData();
+		return !!(pluginData && Object.keys(pluginData.dailyStats).length > 0);
+	}
+
 	private renderNoDataMessage(container: HTMLElement): void {
 		const noDataContainer = container.createDiv("count-novels-no-data");
 
@@ -158,117 +133,81 @@ export class CountNovelHome extends ItemView {
 		});
 	}
 
-	/**
-	 * 統計データが存在する場合の基本HTML構造を作成
-	 * サマリー表示機能を実装
-	 */
 	private renderStatsStructure(container: HTMLElement): void {
-		// サマリーセクション
+		this.createSummarySection(container);
+		this.createChartSection(container);
+	}
+
+	private createSummarySection(container: HTMLElement): void {
 		const summarySection = container.createDiv("count-novels-summary");
 		summarySection.createEl("h2", {
 			text: "サマリー",
 			cls: "count-novels-section-title",
 		});
-
-		// サマリー表示機能を実装
 		this.renderSummary(summarySection);
+	}
 
-		// グラフセクション
+	private createChartSection(container: HTMLElement): void {
 		const chartSection = container.createDiv("count-novels-chart");
 		chartSection.createEl("h2", {
 			text: "月間グラフ",
 			cls: "count-novels-section-title",
 		});
-
-		const chartContent = chartSection.createDiv(
-			"count-novels-chart-content"
-		);
-
-		// Chart.jsグラフ表示機能を実装
+		const chartContent = chartSection.createDiv("count-novels-chart-content");
 		this.renderChart(chartContent);
 	}
 
-	/**
-	 * サマリー表示機能の実装
-	 * 要件3.2: 今月の合計執筆文字数を表示
-	 * 要件3.3: 継続日数（ストリーク）を表示
-	 */
 	private renderSummary(container: HTMLElement): void {
-		const summaryContent = container.createDiv(
-			"count-novels-summary-content"
-		);
+		const summaryContent = container.createDiv("count-novels-summary-content");
+		
+		const stats = this.calculateAllStats();
+		this.createSummaryItem(summaryContent, "今月の執筆文字数", `${stats.monthlyTotal.toLocaleString()}文字`);
+		this.createSummaryItem(summaryContent, "継続日数", `${stats.streak}日`, "count-novels-streak");
+		this.createSummaryItem(summaryContent, "1日の平均", `${stats.dailyAverage.toLocaleString()}文字`);
+	}
 
-		// 今月の合計執筆文字数を計算・表示
-		const monthlyTotal = this.calculateMonthlyTotal();
-		const monthlyTotalEl = summaryContent.createDiv(
-			"count-novels-summary-item"
-		);
-		monthlyTotalEl.createEl("span", {
-			text: "今月の執筆文字数: ",
+	private createSummaryItem(container: HTMLElement, label: string, value: string, extraClass?: string): void {
+		const item = container.createDiv("count-novels-summary-item");
+		item.createEl("span", {
+			text: `${label}: `,
 			cls: "count-novels-summary-label",
 		});
-		monthlyTotalEl.createEl("span", {
-			text: `${monthlyTotal.toLocaleString()}文字`,
-			cls: "count-novels-summary-value",
-		});
-
-		// 継続日数（ストリーク）を計算・表示
-		const streak = this.calculateStreak();
-		const streakEl = summaryContent.createDiv("count-novels-summary-item");
-		streakEl.createEl("span", {
-			text: "継続日数: ",
-			cls: "count-novels-summary-label",
-		});
-		streakEl.createEl("span", {
-			text: `${streak}日`,
-			cls: "count-novels-summary-value count-novels-streak",
-		});
-
-		// 1日の平均を計算・表示
-		const dailyAverage = this.calculateDailyAverage();
-		const dailyAverageEl = summaryContent.createDiv(
-			"count-novels-summary-item"
-		);
-		dailyAverageEl.createEl("span", {
-			text: "1日の平均: ",
-			cls: "count-novels-summary-label",
-		});
-		dailyAverageEl.createEl("span", {
-			text: `${dailyAverage.toLocaleString()}文字`,
-			cls: "count-novels-summary-value",
+		item.createEl("span", {
+			text: value,
+			cls: `count-novels-summary-value ${extraClass || ""}`.trim(),
 		});
 	}
 
-	/**
-	 * 今月の合計執筆文字数を計算する機能
-	 * 要件3.2: WHEN 統計ビューが開かれる THEN システムは今月の合計執筆文字数を表示する
-	 */
-	private calculateMonthlyTotal(): number {
-		const pluginData = this.plugin.dataStorage.getData();
-		if (!pluginData || !pluginData.dailyStats) {
-			return 0;
-		}
+	private calculateAllStats() {
+		return {
+			monthlyTotal: this.calculateMonthlyTotal(),
+			streak: this.calculateStreak(),
+			dailyAverage: this.calculateDailyAverage(),
+		};
+	}
 
+	private getCurrentMonthPrefix(): string {
 		const currentDate = new Date();
 		const currentYear = currentDate.getFullYear();
-		const currentMonth = currentDate.getMonth() + 1; // getMonth()は0ベースなので+1
-		const monthPrefix = `${currentYear}-${currentMonth
-			.toString()
-			.padStart(2, "0")}`;
+		const currentMonth = currentDate.getMonth() + 1;
+		return `${currentYear}-${currentMonth.toString().padStart(2, "0")}`;
+	}
 
-		let monthlyTotal = 0;
-		for (const [date, characterDiff] of Object.entries(
-			pluginData.dailyStats
-		)) {
-			if (date.startsWith(monthPrefix)) {
-				// 正の値のみを合計（執筆文字数のみ、削除は除外）
-				if (characterDiff > 0) {
-					monthlyTotal += characterDiff;
-				}
-			}
+	private getMonthlyData(): Array<[string, number]> {
+		const pluginData = this.plugin.dataStorage.getData();
+		if (!pluginData || !pluginData.dailyStats) {
+			return [];
 		}
 
-		return monthlyTotal;
+		const monthPrefix = this.getCurrentMonthPrefix();
+		return Object.entries(pluginData.dailyStats)
+			.filter(([date]) => date.startsWith(monthPrefix));
+	}
+
+	private calculateMonthlyTotal(): number {
+		return this.getMonthlyData()
+			.filter(([, characterDiff]) => characterDiff > 0)
+			.reduce((total, [, characterDiff]) => total + characterDiff, 0);
 	}
 
 	/**
@@ -323,44 +262,16 @@ export class CountNovelHome extends ItemView {
 		return streak;
 	}
 
-	/**
-	 * 1日の平均執筆文字数を計算する機能
-	 * 今月の執筆日数で今月の合計文字数を割って平均を算出
-	 */
 	private calculateDailyAverage(): number {
-		const pluginData = this.plugin.dataStorage.getData();
-		if (!pluginData || !pluginData.dailyStats) {
+		const monthlyData = this.getMonthlyData();
+		const writingDays = monthlyData.filter(([, characterDiff]) => characterDiff > 0);
+		
+		if (writingDays.length === 0) {
 			return 0;
 		}
 
-		const currentDate = new Date();
-		const currentYear = currentDate.getFullYear();
-		const currentMonth = currentDate.getMonth() + 1;
-		const monthPrefix = `${currentYear}-${currentMonth
-			.toString()
-			.padStart(2, "0")}`;
-
-		let monthlyTotal = 0;
-		let writingDays = 0;
-
-		for (const [date, characterDiff] of Object.entries(
-			pluginData.dailyStats
-		)) {
-			if (date.startsWith(monthPrefix)) {
-				// 正の値のみを合計（執筆文字数のみ、削除は除外）
-				if (characterDiff > 0) {
-					monthlyTotal += characterDiff;
-					writingDays++;
-				}
-			}
-		}
-
-		// 執筆日数が0の場合は0を返す
-		if (writingDays === 0) {
-			return 0;
-		}
-
-		return Math.round(monthlyTotal / writingDays);
+		const monthlyTotal = writingDays.reduce((total, [, characterDiff]) => total + characterDiff, 0);
+		return Math.round(monthlyTotal / writingDays.length);
 	}
 
 	/**
@@ -373,342 +284,248 @@ export class CountNovelHome extends ItemView {
 		return `${year}-${month}-${day}`;
 	}
 
-	/**
-	 * Chart.jsグラフを描画・更新する機能を実装
-	 * 要件3.4: 月間バーグラフを表示する
-	 * 要件4.1: Chart.jsを使用してバーグラフを描画する
-	 */
 	private renderChart(container: HTMLElement): void {
-		// 既存のチャートを破棄
-		if (this.chartInstance) {
-			this.chartInstance.destroy();
-			this.chartInstance = undefined;
-		}
-
-		// キャンバス要素を作成
+		this.destroyExistingChart();
+		
 		const canvas = container.createEl("canvas", {
 			cls: "count-novels-chart-canvas",
 		});
 
-		// グラフデータを生成
-		const chartData = this.generateChartData();
-
-		// 月間バーグラフの設定を作成
-		const chartConfig = this.createChartConfiguration(chartData);
-
-		// グラフを描画
 		try {
+			const chartData = this.generateChartData();
+			const chartConfig = this.createChartConfiguration(chartData);
 			this.chartInstance = new Chart(canvas, chartConfig);
 		} catch (error) {
 			console.error("Count Novels: Failed to create chart:", error);
-			// Chart.js読み込み失敗時のフォールバック
 			this.renderChartFallback(container);
 		}
 	}
 
-	/**
-	 * 月間バーグラフの設定を作成
-	 * 要件4.2: X軸には日付（1日、2日、3日...）を表示
-	 * 要件4.3: Y軸には文字数を表示
-	 * 要件4.4: 各日の執筆文字数をバーで表示
-	 * 要件4.5: マイナス値がある場合は削除された文字数として異なる色で表示
-	 */
-	private createChartConfiguration(
-		chartData: ChartData<"bar">
-	): ChartConfiguration<"bar"> {
-		// テーマに応じた色を取得
+	private destroyExistingChart(): void {
+		if (this.chartInstance) {
+			this.chartInstance.destroy();
+			this.chartInstance = undefined;
+		}
+	}
+
+	private createChartConfiguration(chartData: ChartData<"bar">): ChartConfiguration<"bar"> {
 		const colors = this.getThemeColors();
+		const averageValue = this.calculateAverageFromChartData(chartData);
+		
 		return {
 			type: "bar",
 			data: chartData,
 			options: {
 				responsive: true,
 				maintainAspectRatio: false,
-				plugins: {
-					title: {
-						display: true,
-						text: "今月の執筆進捗",
-						color: colors.textPrimary,
-						font: {
-							size: 16,
-							weight: "bold",
-						},
-					},
-					legend: {
-						display: true,
-						labels: {
-							color: colors.textPrimary,
-							font: {
-								size: 12,
-							},
-							usePointStyle: true,
-							padding: 20,
-						},
-					},
-					tooltip: {
-						backgroundColor: colors.tooltipBg,
-						titleColor: colors.textPrimary,
-						bodyColor: colors.textPrimary,
-						borderColor: colors.tooltipBorder,
-						borderWidth: 1,
-						callbacks: {
-							label: (context) => {
-								const value = context.parsed.y;
-								const label = context.dataset.label || "";
-								return `${label}: ${value.toLocaleString()}文字`;
-							},
-						},
-					},
-					annotation: {
-						annotations: {
-							averageLine: {
-								type: "line",
-								yMin: (() => {
-									// 平均値を計算
-									let totalValue = 0;
-									let count = 0;
-									chartData.datasets.forEach((dataset) => {
-										dataset.data.forEach((value) => {
-											if (
-												typeof value === "number" &&
-												value > 0
-											) {
-												totalValue += value;
-												count++;
-											}
-										});
-									});
-									return count > 0 ? totalValue / count : 0;
-								})(),
-								yMax: (() => {
-									// 平均値を計算（同じ値）
-									let totalValue = 0;
-									let count = 0;
-									chartData.datasets.forEach((dataset) => {
-										dataset.data.forEach((value) => {
-											if (
-												typeof value === "number" &&
-												value > 0
-											) {
-												totalValue += value;
-												count++;
-											}
-										});
-									});
-									return count > 0 ? totalValue / count : 0;
-								})(),
-								borderColor: "#FFD700", // 黄色
-								borderWidth: 2,
-								borderDash: [5, 5], // 点線
-								label: {
-									content: "平均値",
-									position: "end",
-									backgroundColor: "#FFD700",
-									color: "#000",
-									font: {
-										size: 11,
-									},
-								},
-							},
-						},
-					},
-				},
-				scales: {
-					x: {
-						// 要件4.2: X軸には日付（1日、2日、3日...）を表示
-						title: {
-							display: true,
-							text: "日付",
-							color: colors.textPrimary,
-							font: {
-								size: 12,
-								weight: "bold",
-							},
-						},
-						ticks: {
-							color: colors.textSecondary,
-							font: {
-								size: 11,
-							},
-							// X軸を5日間隔で表示（1日, 6日, 11日...）
-							callback: function (value, index) {
-								const day = index + 1; // インデックスは0ベースなので+1
-								// 1日目、または5の倍数+1の日（6日、11日、16日...）を表示
-								if (day === 1 || (day - 1) % 5 === 0) {
-									return `${day}日`;
-								}
-								return "";
-							},
-							maxTicksLimit: 7, // 最大7個の目盛りに制限
-						},
-						grid: {
-							color: colors.gridColor,
-							lineWidth: 1,
-						},
-					},
-					y: {
-						// 要件4.3: Y軸には文字数を表示
-						title: {
-							display: true,
-							text: "文字数",
-							color: colors.textPrimary,
-							font: {
-								size: 12,
-								weight: "bold",
-							},
-						},
-						ticks: {
-							color: colors.textSecondary,
-							font: {
-								size: 11,
-							},
-							// Y軸を動的に5分割で表示
-							maxTicksLimit: 5, // 0を含めて5個の目盛り（5分割）
-							stepSize: (() => {
-								// chartDataから全データセットの最大値を取得
-								let maxValue = 0;
-								chartData.datasets.forEach((dataset) => {
-									dataset.data.forEach((value) => {
-										if (typeof value === "number") {
-											maxValue = Math.max(
-												maxValue,
-												Math.abs(value)
-											);
-										}
-									});
-								});
-
-								if (maxValue === 0) return 1000; // デフォルト値
-
-								// 5分割するための適切なstepSizeを計算
-								const rawStep = maxValue / 5;
-								// きれいな数値に丸める（100, 200, 500, 1000, 2000, 5000など）
-								const magnitude = Math.pow(
-									10,
-									Math.floor(Math.log10(rawStep))
-								);
-								const normalized = rawStep / magnitude;
-								let niceStep;
-								if (normalized <= 1) niceStep = 1;
-								else if (normalized <= 2) niceStep = 2;
-								else if (normalized <= 5) niceStep = 5;
-								else niceStep = 10;
-								return niceStep * magnitude;
-							})(),
-							callback: function (value) {
-								if (typeof value === "number") {
-									if (value === 0) return "0";
-									if (value >= 1000) {
-										return (
-											(value / 1000).toLocaleString() +
-											"k"
-										);
-									}
-									return value.toLocaleString();
-								}
-								return value;
-							},
-						},
-						grid: {
-							color: colors.gridColor,
-							lineWidth: 1,
-						},
-						beginAtZero: true,
-					},
-				},
+				plugins: this.createChartPlugins(colors, averageValue),
+				scales: this.createChartScales(colors, chartData),
 			},
-			// カスタムプラグインで棒グラフの頂点に数値を表示
-			plugins: [
-				{
-					id: "dataLabels",
-					afterDatasetsDraw: (chart: any) => {
-						const ctx = chart.ctx;
-						chart.data.datasets.forEach(
-							(dataset: any, datasetIndex: number) => {
-								const meta = chart.getDatasetMeta(datasetIndex);
-								if (!meta.hidden) {
-									meta.data.forEach(
-										(bar: any, index: number) => {
-											const value = dataset.data[index];
-											if (value > 0) {
-												// 0より大きい値のみ表示
-												ctx.fillStyle =
-													colors.textPrimary;
-												ctx.font =
-													"bold 11px sans-serif";
-												ctx.textAlign = "center";
-												ctx.textBaseline = "bottom";
-
-												const x = bar.x;
-												const y = bar.y - 5; // バーの上に少し余白を空けて表示
-
-												ctx.fillText(
-													value.toLocaleString(),
-													x,
-													y
-												);
-											}
-										}
-									);
-								}
-							}
-						);
-					},
-				},
-			],
+			plugins: [this.createDataLabelsPlugin(colors)],
 		};
 	}
 
-	/**
-	 * dailyStatsからグラフデータを生成する機能を実装
-	 * 要件4.4: 各日の執筆文字数をバーで表示
-	 * 要件4.5: マイナス値がある場合は削除された文字数として異なる色で表示
-	 * 要件4.6: 月が変わる場合は新しい月のデータでグラフを更新
-	 */
+	private createChartPlugins(colors: any, averageValue: number) {
+		return {
+			title: {
+				display: true,
+				text: "今月の執筆進捗",
+				color: colors.textPrimary,
+				font: { size: 16, weight: "bold" as const },
+			},
+			legend: {
+				display: true,
+				labels: {
+					color: colors.textPrimary,
+					font: { size: 12 },
+					usePointStyle: true,
+					padding: 20,
+				},
+			},
+			tooltip: {
+				backgroundColor: colors.tooltipBg,
+				titleColor: colors.textPrimary,
+				bodyColor: colors.textPrimary,
+				borderColor: colors.tooltipBorder,
+				borderWidth: 1,
+				callbacks: {
+					label: (context: any) => {
+						const value = context.parsed.y;
+						const label = context.dataset.label || "";
+						return `${label}: ${value.toLocaleString()}文字`;
+					},
+				},
+			},
+			annotation: {
+				annotations: {
+					averageLine: {
+						type: "line" as const,
+						yMin: averageValue,
+						yMax: averageValue,
+						borderColor: "#FFD700",
+						borderWidth: 2,
+						borderDash: [5, 5],
+						label: {
+							content: "平均値",
+							position: "end" as const,
+							backgroundColor: "#FFD700",
+							color: "#000",
+							font: { size: 11 },
+						},
+					},
+				},
+			},
+		};
+	}
+
+	private createChartScales(colors: any, chartData: ChartData<"bar">) {
+		return {
+			x: this.createXAxisConfig(colors),
+			y: this.createYAxisConfig(colors, chartData),
+		};
+	}
+
+	private createXAxisConfig(colors: any) {
+		return {
+			title: {
+				display: true,
+				text: "日付",
+				color: colors.textPrimary,
+				font: { size: 12, weight: "bold" as const },
+			},
+			ticks: {
+				color: colors.textSecondary,
+				font: { size: 11 },
+				callback: function (value: any, index: number) {
+					const day = index + 1;
+					if (day === 1 || (day - 1) % 5 === 0) {
+						return `${day}日`;
+					}
+					return "";
+				},
+				maxTicksLimit: 7,
+			},
+			grid: {
+				color: colors.gridColor,
+				lineWidth: 1,
+			},
+		};
+	}
+
+	private createYAxisConfig(colors: any, chartData: ChartData<"bar">) {
+		const maxValue = this.getMaxValueFromChartData(chartData);
+		const stepSize = this.calculateStepSize(maxValue);
+
+		return {
+			title: {
+				display: true,
+				text: "文字数",
+				color: colors.textPrimary,
+				font: { size: 12, weight: "bold" as const },
+			},
+			ticks: {
+				color: colors.textSecondary,
+				font: { size: 11 },
+				maxTicksLimit: 5,
+				stepSize,
+				callback: function (value: any) {
+					if (typeof value === "number") {
+						if (value === 0) return "0";
+						if (value >= 1000) {
+							return (value / 1000).toLocaleString() + "k";
+						}
+						return value.toLocaleString();
+					}
+					return value;
+				},
+			},
+			grid: {
+				color: colors.gridColor,
+				lineWidth: 1,
+			},
+			beginAtZero: true,
+		};
+	}
+
+	private calculateAverageFromChartData(chartData: ChartData<"bar">): number {
+		let totalValue = 0;
+		let count = 0;
+		
+		chartData.datasets.forEach((dataset) => {
+			dataset.data.forEach((value) => {
+				if (typeof value === "number" && value > 0) {
+					totalValue += value;
+					count++;
+				}
+			});
+		});
+		
+		return count > 0 ? totalValue / count : 0;
+	}
+
+	private getMaxValueFromChartData(chartData: ChartData<"bar">): number {
+		let maxValue = 0;
+		
+		chartData.datasets.forEach((dataset) => {
+			dataset.data.forEach((value) => {
+				if (typeof value === "number") {
+					maxValue = Math.max(maxValue, Math.abs(value));
+				}
+			});
+		});
+		
+		return maxValue;
+	}
+
+	private calculateStepSize(maxValue: number): number {
+		if (maxValue === 0) return 1000;
+
+		const rawStep = maxValue / 5;
+		const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+		const normalized = rawStep / magnitude;
+		
+		let niceStep;
+		if (normalized <= 1) niceStep = 1;
+		else if (normalized <= 2) niceStep = 2;
+		else if (normalized <= 5) niceStep = 5;
+		else niceStep = 10;
+		
+		return niceStep * magnitude;
+	}
+
+	private createDataLabelsPlugin(colors: any) {
+		return {
+			id: "dataLabels",
+			afterDatasetsDraw: (chart: any) => {
+				const ctx = chart.ctx;
+				chart.data.datasets.forEach((dataset: any, datasetIndex: number) => {
+					const meta = chart.getDatasetMeta(datasetIndex);
+					if (!meta.hidden) {
+						meta.data.forEach((bar: any, index: number) => {
+							const value = dataset.data[index];
+							if (value > 0) {
+								ctx.fillStyle = colors.textPrimary;
+								ctx.font = "bold 11px sans-serif";
+								ctx.textAlign = "center";
+								ctx.textBaseline = "bottom";
+								ctx.fillText(value.toLocaleString(), bar.x, bar.y - 5);
+							}
+						});
+					}
+				});
+			},
+		};
+	}
+
 	private generateChartData(): ChartData<"bar"> {
-		// テーマに応じた色を取得
 		const colors = this.getThemeColors();
 		const pluginData = this.plugin.dataStorage.getData();
 
 		if (!pluginData || !pluginData.dailyStats) {
-			return {
-				labels: [],
-				datasets: [],
-			};
+			return { labels: [], datasets: [] };
 		}
 
-		// 現在の月のデータを取得
-		const currentDate = new Date();
-		const currentYear = currentDate.getFullYear();
-		const currentMonth = currentDate.getMonth() + 1;
-		const monthPrefix = `${currentYear}-${currentMonth
-			.toString()
-			.padStart(2, "0")}`;
-
-		// 月の日数を取得
-		const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
-
-		// 日付ラベルを生成（1日、2日、3日...）
-		const labels: string[] = [];
-		const positiveData: number[] = [];
-		const negativeData: number[] = [];
-
-		for (let day = 1; day <= daysInMonth; day++) {
-			const dayString = day.toString();
-			labels.push(`${dayString}日`);
-
-			const dateKey = `${monthPrefix}-${dayString.padStart(2, "0")}`;
-			const dayStats = pluginData.dailyStats[dateKey] || 0;
-
-			// 要件4.4, 4.5: 正の値と負の値を分けて表示
-			if (dayStats >= 0) {
-				positiveData.push(dayStats);
-				negativeData.push(0);
-			} else {
-				positiveData.push(0);
-				negativeData.push(Math.abs(dayStats)); // 負の値を正の値として表示
-			}
-		}
+		const { labels, positiveData, negativeData } = this.processMonthlyChartData();
 
 		return {
 			labels,
@@ -729,6 +546,41 @@ export class CountNovelHome extends ItemView {
 				},
 			],
 		};
+	}
+
+	private processMonthlyChartData() {
+		const currentDate = new Date();
+		const currentYear = currentDate.getFullYear();
+		const currentMonth = currentDate.getMonth() + 1;
+		const monthPrefix = this.getCurrentMonthPrefix();
+		const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+
+		const pluginData = this.plugin.dataStorage.getData();
+		if (!pluginData) {
+			return { labels: [], positiveData: [], negativeData: [] };
+		}
+
+		const labels: string[] = [];
+		const positiveData: number[] = [];
+		const negativeData: number[] = [];
+
+		for (let day = 1; day <= daysInMonth; day++) {
+			const dayString = day.toString();
+			labels.push(`${dayString}日`);
+
+			const dateKey = `${monthPrefix}-${dayString.padStart(2, "0")}`;
+			const dayStats = pluginData.dailyStats[dateKey] || 0;
+
+			if (dayStats >= 0) {
+				positiveData.push(dayStats);
+				negativeData.push(0);
+			} else {
+				positiveData.push(0);
+				negativeData.push(Math.abs(dayStats));
+			}
+		}
+
+		return { labels, positiveData, negativeData };
 	}
 
 	/**
@@ -776,60 +628,30 @@ export class CountNovelHome extends ItemView {
 		}
 	}
 
-	/**
-	 * ビューを再描画する（データ更新時に使用）
-	 * データ更新時にサマリーを再描画する機能を実装
-	 */
 	public refreshView(): void {
 		this.renderView();
 	}
 
-	/**
-	 * サマリーのみを再描画する（効率的な更新用）
-	 * データ更新時にサマリーを再描画する機能
-	 */
 	public refreshSummary(): void {
-		const summarySection = this.containerEl.querySelector(
-			".count-novels-summary"
-		);
+		const summarySection = this.containerEl.querySelector(".count-novels-summary");
 		if (summarySection) {
-			// 既存のサマリーコンテンツをクリア
-			const summaryContent = summarySection.querySelector(
-				".count-novels-summary-content"
-			);
-			if (summaryContent) {
-				summaryContent.remove();
-			}
-
-			// サマリーを再描画
+			const summaryContent = summarySection.querySelector(".count-novels-summary-content");
+			summaryContent?.remove();
 			this.renderSummary(summarySection as HTMLElement);
 		}
 	}
 
-	/**
-	 * グラフを更新する（効率的な更新用）
-	 * データ更新時にグラフを再描画する機能を実装
-	 */
 	public refreshChart(): void {
-		const chartSection = this.containerEl.querySelector(
-			".count-novels-chart-content"
-		);
+		const chartSection = this.containerEl.querySelector(".count-novels-chart-content");
 		if (chartSection && this.chartInstance) {
-			// 新しいデータを生成
 			const newChartData = this.generateChartData();
-
-			// チャートデータを更新
 			this.chartInstance.data = newChartData;
 			this.chartInstance.update();
 		} else if (chartSection) {
-			// チャートが存在しない場合は再作成
 			this.renderChart(chartSection as HTMLElement);
 		}
 	}
 
-	/**
-	 * サマリーとグラフの両方を更新する（統合更新メソッド）
-	 */
 	public refreshStats(): void {
 		this.refreshSummary();
 		this.refreshChart();
