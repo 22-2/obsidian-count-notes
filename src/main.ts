@@ -1,28 +1,32 @@
+import log from "loglevel";
 import { Plugin } from "obsidian";
-import { DEFAULT_SETTINGS } from "./utils/constants";
-import { DirectLogger, Logger } from "./utils/logging";
-import { MyPluginSettings, MyPluginSettingTab } from "./settings";
+import {
+	CountNovelsSettingTab,
+	CountNovelsSettings,
+	DEFAULT_SETTINGS,
+} from "./settings";
 
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings = DEFAULT_SETTINGS;
-	logger!: DirectLogger;
+export default class CountNovelsPlugin extends Plugin {
+	settings: CountNovelsSettings = DEFAULT_SETTINGS;
 
 	async onload() {
 		await this.loadSettings();
-		this.addSettingTab(new MyPluginSettingTab(this));
-		this.initializeLogger();
+		this.addSettingTab(new CountNovelsSettingTab(this));
+		this.togglLoggersBy(this.settings.logLevel);
 	}
 
-	onunload() {
-		this.logger.debug("Plugin unloaded");
-	}
+	onunload() {}
 
-	initializeLogger(): void {
-		this.logger = new DirectLogger({
-			level: this.settings.logLevel,
-			name: "MyPlugin",
-		});
-		this.logger.debug("debug mode enabled");
+	togglLoggersBy(
+		level: log.LogLevelDesc,
+		filter: (name: string) => boolean = () => true
+	): void {
+		Object.values(log.getLoggers())
+			// @ts-expect-error
+			.filter((logger) => filter(logger.name))
+			.forEach((logger) => {
+				logger.setLevel(level);
+			});
 	}
 
 	async loadSettings() {

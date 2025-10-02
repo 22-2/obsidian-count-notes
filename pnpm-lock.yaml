@@ -11,6 +11,9 @@ importers:
       chart.js:
         specifier: ^4.5.0
         version: 4.5.0
+      loglevel:
+        specifier: ^1.9.2
+        version: 1.9.2
     devDependencies:
       '@biomejs/biome':
         specifier: 2.2.4
@@ -1218,6 +1221,10 @@ packages:
 
   lodash-es@4.17.21:
     resolution: {integrity: sha512-mKnC+QJ9pWVzv+C4/U3rRsHapFfHvQFoFB92e52xeyGMcX6/OlIl78je1u8vePzYZSkkogMPJ2yjxxsb89cxyw==}
+
+  loglevel@1.9.2:
+    resolution: {integrity: sha512-HgMmCqIJSAKqo68l0rS2AanEWfkxaZ5wNiEFb5ggm08lDs9Xl2KxBlX3PTcaD2chBM1gXAYf491/M2Rv8Jwayg==}
+    engines: {node: '>= 0.6.0'}
 
   lowercase-keys@2.0.0:
     resolution: {integrity: sha512-tqNXrS78oMOE73NMxK4EMLQsQowWf8jKooH9g7xPavRT706R6bkQJ6DY2Te7QukaZsulxa30wQ7bk0pm4XiHmA==}
@@ -2666,6 +2673,8 @@ snapshots:
       quansync: 0.2.11
 
   lodash-es@4.17.21: {}
+
+  loglevel@1.9.2: {}
 
   lowercase-keys@2.0.0: {}
 

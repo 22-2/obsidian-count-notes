@@ -1,11 +1,11 @@
 import { PluginSettingTab, Setting } from "obsidian";
-import type MyPlugin from "./main";
+import type CountNovelsPlugin from "./main";
 
-export interface MyPluginSettings {
+export interface CountNovelsSettings {
 	logLevel: any;
 }
-export class MyPluginSettingTab extends PluginSettingTab {
-	constructor(public plugin: MyPlugin) {
+export class CountNovelsSettingTab extends PluginSettingTab {
+	constructor(public plugin: CountNovelsPlugin) {
 		super(plugin.app, plugin);
 	}
 
@@ -23,8 +23,11 @@ export class MyPluginSettingTab extends PluginSettingTab {
 					.onChange(async (val) => {
 						this.plugin.settings.logLevel = val ? "debug" : "info";
 						await this.plugin.saveSettings();
-						this.plugin.initializeLogger();
 					});
 			});
 	}
 }
+
+export const DEFAULT_SETTINGS: CountNovelsSettings = {
+	logLevel: "debug",
+};
