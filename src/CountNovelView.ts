@@ -179,7 +179,7 @@ export class CountNovelHome extends ItemView {
 			text: label,
 			cls: "count-novels-summary-label",
 		});
-		
+
 		const valueContainer = item.createDiv("count-novels-summary-value");
 		valueContainer.createEl("span", {
 			text: number,
@@ -547,13 +547,13 @@ export class CountNovelHome extends ItemView {
 					borderColor: colors.positiveBorder,
 					borderWidth: 2,
 				},
-				{
-					label: "削除文字数",
-					data: negativeData,
-					backgroundColor: colors.negativeColor,
-					borderColor: colors.negativeBorder,
-					borderWidth: 2,
-				},
+				// {
+				// 	label: "削除文字数",
+				// 	data: negativeData,
+				// 	backgroundColor: colors.negativeColor,
+				// 	borderColor: colors.negativeBorder,
+				// 	borderWidth: 2,
+				// },
 			],
 		};
 	}
