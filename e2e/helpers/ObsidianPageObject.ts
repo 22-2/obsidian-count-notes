@@ -1,4 +1,5 @@
-import type { Locator, Page } from "playwright";
+import { CMD_ID_UNDO_CLOSE_TAB } from "e2e/constants";
+import type { JSHandle, Locator, Page } from "playwright";
 import { expect } from "playwright/test";
 import type { VaultOptions } from "./managers/VaultManager";
 import type { VaultPageTextContext } from "./types";
@@ -130,6 +131,10 @@ export class ObsidianPageObject {
 		await this.page.evaluate(() => app.workspace.activeLeaf?.detach());
 	}
 
+	async undoCloseTab(): Promise<void> {
+		await this.runCommand(CMD_ID_UNDO_CLOSE_TAB);
+	}
+
 	async goBackInHistory(): Promise<void> {
 		await this.page.evaluate(() =>
 			app.workspace.activeLeaf?.history.back()
@@ -219,14 +224,14 @@ export class ObsidianPageObject {
 
 	// ===== プラグイン操作 =====
 
-	async getPlugin<T = any>(pluginId: string): Promise<T> {
+	async getPlugin<T = any>(pluginId: string): Promise<JSHandle<T>> {
 		if (!this.pluginHandleMap) {
 			throw new Error("pluginHandleMap is not initialized");
 		}
 		return this.pluginHandleMap.evaluateHandle(
-			(map, id) => map.get(id),
+			(map, id) => map.get(id) as T,
 			pluginId
-		) as Promise<T>;
+		);
 	}
 
 	async isPluginEnabled(pluginId: string): Promise<boolean> {
