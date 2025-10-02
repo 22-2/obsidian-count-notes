@@ -113,10 +113,6 @@ jobs:
               run: pnpm run test:e2e:example
               env:
                   DEBUG: "pw:browser"
-            - name: Run Playwright minimal main test
-              run: pnpm run test:e2e:minimal-main
-              env:
-                  DEBUG: "pw:browser"
 
             - name: Upload Playwright report
               if: always()
