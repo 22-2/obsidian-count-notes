@@ -59,7 +59,7 @@ export default class CountNovelsPlugin extends Plugin {
 
 	private async openCountNovelsView(): Promise<void> {
 		try {
-			const leaf = this.app.workspace.getLeaf("tab");
+			const leaf = this.app.workspace.getRightLeaf(false)!;
 			await leaf.setViewState({
 				type: VIEW_TYPE_COUNT_NOVEL,
 				active: true,
@@ -75,7 +75,10 @@ export default class CountNovelsPlugin extends Plugin {
 			await this.collectData();
 			console.log("Count Novels: Manual data collection completed");
 		} catch (error) {
-			console.error("Count Novels: Manual data collection failed:", error);
+			console.error(
+				"Count Novels: Manual data collection failed:",
+				error
+			);
 		}
 	}
 
@@ -149,7 +152,9 @@ export default class CountNovelsPlugin extends Plugin {
 			))
 		);
 
-		console.log("Count Novels: Periodic data collection started (10-minute interval)");
+		console.log(
+			"Count Novels: Periodic data collection started (10-minute interval)"
+		);
 	}
 
 	private async handlePeriodicDataCollection(): Promise<void> {
@@ -158,7 +163,10 @@ export default class CountNovelsPlugin extends Plugin {
 			await this.collectData();
 			console.log("Count Novels: Periodic data collection completed");
 		} catch (error) {
-			console.error("Count Novels: Error during periodic data collection:", error);
+			console.error(
+				"Count Novels: Error during periodic data collection:",
+				error
+			);
 		}
 	}
 
