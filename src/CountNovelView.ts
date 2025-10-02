@@ -340,12 +340,6 @@ export class CountNovelHome extends ItemView {
 
 	private createChartPlugins(colors: any, averageValue: number) {
 		return {
-			title: {
-				display: true,
-				text: "今月の執筆進捗",
-				color: colors.textPrimary,
-				font: { size: 16, weight: "bold" as const },
-			},
 			legend: {
 				display: true,
 				labels: {
@@ -400,12 +394,6 @@ export class CountNovelHome extends ItemView {
 
 	private createXAxisConfig(colors: any) {
 		return {
-			title: {
-				display: true,
-				text: "日付",
-				color: colors.textPrimary,
-				font: { size: 12, weight: "bold" as const },
-			},
 			ticks: {
 				color: colors.textSecondary,
 				font: { size: 11 },
@@ -430,12 +418,6 @@ export class CountNovelHome extends ItemView {
 		const stepSize = this.calculateStepSize(maxValue);
 
 		return {
-			title: {
-				display: true,
-				text: "文字数",
-				color: colors.textPrimary,
-				font: { size: 12, weight: "bold" as const },
-			},
 			ticks: {
 				color: colors.textSecondary,
 				font: { size: 11 },
