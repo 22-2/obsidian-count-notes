@@ -151,35 +151,43 @@ export class CountNovelHome extends ItemView {
 		this.createSummaryItem(
 			summaryContent,
 			"1日の平均",
-			`${stats.dailyAverage.toLocaleString()}文字`
+			stats.dailyAverage.toLocaleString(),
+			"文字"
 		);
 		this.createSummaryItem(
 			summaryContent,
 			"月の合計",
-			`${stats.monthlyTotal.toLocaleString()}文字`
+			stats.monthlyTotal.toLocaleString(),
+			"文字"
 		);
 		this.createSummaryItem(
 			summaryContent,
 			"継続日数",
-			`${stats.streak}日`,
-			"count-novels-streak"
+			stats.streak.toString(),
+			"日"
 		);
 	}
 
 	private createSummaryItem(
 		container: HTMLElement,
 		label: string,
-		value: string,
-		extraClass?: string
+		number: string,
+		unit: string
 	): void {
 		const item = container.createDiv("count-novels-summary-item");
 		item.createEl("span", {
-			text: `${label}: `,
+			text: label,
 			cls: "count-novels-summary-label",
 		});
-		item.createEl("span", {
-			text: value,
-			cls: `count-novels-summary-value ${extraClass || ""}`.trim(),
+		
+		const valueContainer = item.createDiv("count-novels-summary-value");
+		valueContainer.createEl("span", {
+			text: number,
+			cls: "count-novels-summary-number",
+		});
+		valueContainer.createEl("span", {
+			text: unit,
+			cls: "count-novels-summary-unit",
 		});
 	}
 
