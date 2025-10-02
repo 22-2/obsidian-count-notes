@@ -8,7 +8,7 @@ import os from "os";
 import path from "path";
 import type { ElectronApplication } from "playwright";
 import { _electron as electron } from "playwright/test";
-import { LAUNCH_OPTIONS } from "../../constants";
+import { LAUNCH_OPTIONS } from "../constants";
 import { PageManager } from "../helpers/managers/PageManager";
 import {
 	VaultManager,

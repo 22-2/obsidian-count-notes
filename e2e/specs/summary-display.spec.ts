@@ -3,7 +3,7 @@ import "./setup/logger-setup";
 
 import { expect, test } from "../base";
 import { DIST_DIR, PLUGIN_ID, SANDBOX_VAULT_NAME } from "../constants";
-import { ObsidianPageObject } from "./helpers/ObsidianPageObject";
+import { ObsidianPageObject } from "../helpers/ObsidianPageObject";
 
 test.describe("Summary Display Functionality", () => {
 	test("should display summary with monthly total and streak", async ({
@@ -56,9 +56,13 @@ It has multiple lines and paragraphs.`,
 				// Get the collected data
 				const pluginData = plugin.dataStorage.getData();
 				return {
-					hasData: pluginData && Object.keys(pluginData.dailyStats).length > 0,
-					dailyStatsCount: Object.keys(pluginData?.dailyStats || {}).length,
-					lastTotalCharacterCount: pluginData?.lastTotalCharacterCount || 0
+					hasData:
+						pluginData &&
+						Object.keys(pluginData.dailyStats).length > 0,
+					dailyStatsCount: Object.keys(pluginData?.dailyStats || {})
+						.length,
+					lastTotalCharacterCount:
+						pluginData?.lastTotalCharacterCount || 0,
 				};
 			},
 			PLUGIN_ID
@@ -66,43 +70,50 @@ It has multiple lines and paragraphs.`,
 
 		expect(dataCollectionResult).toBeTruthy();
 		expect(dataCollectionResult!.hasData).toBe(true);
-		expect(dataCollectionResult!.lastTotalCharacterCount).toBeGreaterThan(0);
+		expect(dataCollectionResult!.lastTotalCharacterCount).toBeGreaterThan(
+			0
+		);
 
 		// 4. Test that the view can be opened and displays summary
-		const viewTestResult = await vault.window.evaluate(
-			async (pluginId) => {
-				const plugin = app.plugins.getPlugin(pluginId) as any;
-				if (!plugin) return null;
+		const viewTestResult = await vault.window.evaluate(async (pluginId) => {
+			const plugin = app.plugins.getPlugin(pluginId) as any;
+			if (!plugin) return null;
 
-				// Open the Count Novels view
-				await app.workspace.getLeaf("tab")!.setViewState({
-					type: "count-novels-home",
-					active: true,
-				});
+			// Open the Count Novels view
+			await app.workspace.getLeaf("tab")!.setViewState({
+				type: "count-novels-home",
+				active: true,
+			});
 
-				// Wait a bit for the view to render
-				await new Promise(resolve => setTimeout(resolve, 100));
+			// Wait a bit for the view to render
+			await new Promise((resolve) => setTimeout(resolve, 100));
 
-				// Check if the view exists and has summary content
-				const leaves = app.workspace.getLeavesOfType("count-novels-home");
-				if (leaves.length === 0) return { viewExists: false };
+			// Check if the view exists and has summary content
+			const leaves = app.workspace.getLeavesOfType("count-novels-home");
+			if (leaves.length === 0) return { viewExists: false };
 
-				const view = leaves[0].view as any;
-				
-				// Check if the view has the summary elements
-				const summarySection = view.containerEl.querySelector('.count-novels-summary');
-				const summaryItems = view.containerEl.querySelectorAll('.count-novels-summary-item');
-				
-				return {
-					viewExists: true,
-					hasSummarySection: !!summarySection,
-					summaryItemCount: summaryItems.length,
-					hasMonthlyTotal: !!view.containerEl.querySelector('.count-novels-summary-item:first-child'),
-					hasStreak: !!view.containerEl.querySelector('.count-novels-summary-item:last-child')
-				};
-			},
-			PLUGIN_ID
-		);
+			const view = leaves[0].view as any;
+
+			// Check if the view has the summary elements
+			const summarySection = view.containerEl.querySelector(
+				".count-novels-summary"
+			);
+			const summaryItems = view.containerEl.querySelectorAll(
+				".count-novels-summary-item"
+			);
+
+			return {
+				viewExists: true,
+				hasSummarySection: !!summarySection,
+				summaryItemCount: summaryItems.length,
+				hasMonthlyTotal: !!view.containerEl.querySelector(
+					".count-novels-summary-item:first-child"
+				),
+				hasStreak: !!view.containerEl.querySelector(
+					".count-novels-summary-item:last-child"
+				),
+			};
+		}, PLUGIN_ID);
 
 		expect(viewTestResult).toBeTruthy();
 		expect(viewTestResult!.viewExists).toBe(true);
@@ -139,7 +150,7 @@ It has multiple lines and paragraphs.`,
 				// Test streak calculation with empty data
 				const mockView = {
 					plugin: plugin,
-					calculateStreak: function() {
+					calculateStreak: function () {
 						const pluginData = this.plugin.dataStorage.getData();
 						if (!pluginData || !pluginData.dailyStats) {
 							return 0;
@@ -158,7 +169,8 @@ It has multiple lines and paragraphs.`,
 						}
 
 						while (true) {
-							const dateString = this.formatDateString(currentDate);
+							const dateString =
+								this.formatDateString(currentDate);
 							const dayStats = pluginData.dailyStats[dateString];
 
 							if (dayStats && dayStats > 0) {
@@ -175,12 +187,14 @@ It has multiple lines and paragraphs.`,
 
 						return streak;
 					},
-					formatDateString: function(date) {
+					formatDateString: function (date) {
 						const year = date.getFullYear();
-						const month = (date.getMonth() + 1).toString().padStart(2, '0');
-						const day = date.getDate().toString().padStart(2, '0');
+						const month = (date.getMonth() + 1)
+							.toString()
+							.padStart(2, "0");
+						const day = date.getDate().toString().padStart(2, "0");
 						return `${year}-${month}-${day}`;
-					}
+					},
 				};
 
 				return mockView.calculateStreak();
@@ -221,7 +235,7 @@ It has multiple lines and paragraphs.`,
 				const pluginData = plugin.dataStorage.getData();
 				if (pluginData) {
 					pluginData.dailyStats = {};
-					
+
 					// Set up data: wrote today, yesterday, skip 2 days ago (gap), wrote 4 days ago
 					pluginData.dailyStats[todayStr] = 100;
 					pluginData.dailyStats[yesterdayStr] = 200;
@@ -233,7 +247,7 @@ It has multiple lines and paragraphs.`,
 
 				const mockView = {
 					plugin: plugin,
-					calculateStreak: function() {
+					calculateStreak: function () {
 						const pluginData = this.plugin.dataStorage.getData();
 						if (!pluginData || !pluginData.dailyStats) {
 							return 0;
@@ -252,7 +266,8 @@ It has multiple lines and paragraphs.`,
 						}
 
 						while (true) {
-							const dateString = this.formatDateString(currentDate);
+							const dateString =
+								this.formatDateString(currentDate);
 							const dayStats = pluginData.dailyStats[dateString];
 
 							if (dayStats && dayStats > 0) {
@@ -269,12 +284,14 @@ It has multiple lines and paragraphs.`,
 
 						return streak;
 					},
-					formatDateString: function(date) {
+					formatDateString: function (date) {
 						const year = date.getFullYear();
-						const month = (date.getMonth() + 1).toString().padStart(2, '0');
-						const day = date.getDate().toString().padStart(2, '0');
+						const month = (date.getMonth() + 1)
+							.toString()
+							.padStart(2, "0");
+						const day = date.getDate().toString().padStart(2, "0");
 						return `${year}-${month}-${day}`;
-					}
+					},
 				};
 
 				return mockView.calculateStreak();
@@ -308,15 +325,12 @@ It should generate some character count data for the chart.`,
 		await vault.window.waitForTimeout(500);
 
 		// 2. Trigger data collection
-		await vault.window.evaluate(
-			async (pluginId) => {
-				const plugin = app.plugins.getPlugin(pluginId) as any;
-				if (plugin) {
-					await plugin.collectData();
-				}
-			},
-			PLUGIN_ID
-		);
+		await vault.window.evaluate(async (pluginId) => {
+			const plugin = app.plugins.getPlugin(pluginId) as any;
+			if (plugin) {
+				await plugin.collectData();
+			}
+		}, PLUGIN_ID);
 
 		// 3. Test chart functionality
 		const chartTestResult = await vault.window.evaluate(
@@ -331,22 +345,31 @@ It should generate some character count data for the chart.`,
 				});
 
 				// Wait for the view to render
-				await new Promise(resolve => setTimeout(resolve, 200));
+				await new Promise((resolve) => setTimeout(resolve, 200));
 
-				const leaves = app.workspace.getLeavesOfType("count-novels-home");
+				const leaves =
+					app.workspace.getLeavesOfType("count-novels-home");
 				if (leaves.length === 0) return { viewExists: false };
 
 				const view = leaves[0].view as any;
-				
+
 				// Check if chart elements exist
-				const chartSection = view.containerEl.querySelector('.count-novels-chart');
-				const chartContent = view.containerEl.querySelector('.count-novels-chart-content');
-				const chartCanvas = view.containerEl.querySelector('.count-novels-chart-canvas');
-				const chartFallback = view.containerEl.querySelector('.count-novels-text-stats');
-				
+				const chartSection = view.containerEl.querySelector(
+					".count-novels-chart"
+				);
+				const chartContent = view.containerEl.querySelector(
+					".count-novels-chart-content"
+				);
+				const chartCanvas = view.containerEl.querySelector(
+					".count-novels-chart-canvas"
+				);
+				const chartFallback = view.containerEl.querySelector(
+					".count-novels-text-stats"
+				);
+
 				// Check if Chart.js is initialized
 				const hasChartInstance = !!view.chartInstance;
-				
+
 				return {
 					viewExists: true,
 					hasChartSection: !!chartSection,
@@ -354,7 +377,9 @@ It should generate some character count data for the chart.`,
 					hasChartCanvas: !!chartCanvas,
 					hasChartFallback: !!chartFallback,
 					hasChartInstance: hasChartInstance,
-					chartInstanceType: hasChartInstance ? typeof view.chartInstance : null
+					chartInstanceType: hasChartInstance
+						? typeof view.chartInstance
+						: null,
 				};
 			},
 			PLUGIN_ID
@@ -364,9 +389,11 @@ It should generate some character count data for the chart.`,
 		expect(chartTestResult!.viewExists).toBe(true);
 		expect(chartTestResult!.hasChartSection).toBe(true);
 		expect(chartTestResult!.hasChartContent).toBe(true);
-		
+
 		// Chart should either have a canvas (Chart.js working) or fallback (Chart.js failed)
-		const hasChart = chartTestResult!.hasChartCanvas || chartTestResult!.hasChartFallback;
+		const hasChart =
+			chartTestResult!.hasChartCanvas ||
+			chartTestResult!.hasChartFallback;
 		expect(hasChart).toBe(true);
 
 		// Clean up

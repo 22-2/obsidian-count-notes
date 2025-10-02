@@ -1,8 +1,8 @@
 import { test as base, type TestInfo } from "@playwright/test"; // TestInfo をインポート
 import log from "loglevel";
-import type { VaultOptions } from "./specs/helpers/managers/VaultManager";
-import { type VaultPageTextContext } from "./specs/helpers/types";
-import { ObsidianTestSetup } from "./specs/setup/ObsidianTestSetup";
+import type { VaultOptions } from "./helpers/managers/VaultManager";
+import { type VaultPageTextContext } from "./helpers/types";
+import { ObsidianTestSetup } from "./setup/ObsidianTestSetup";
 
 // TestInfo をフィクスチャの型定義に追加
 type TestFixtures = {

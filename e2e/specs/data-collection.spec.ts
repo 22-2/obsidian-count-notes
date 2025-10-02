@@ -4,7 +4,7 @@ import "./setup/logger-setup";
 import { splitMd } from "src/utils/markdwon";
 import { expect, test } from "../base";
 import { DIST_DIR, PLUGIN_ID, SANDBOX_VAULT_NAME } from "../constants";
-import { ObsidianPageObject } from "./helpers/ObsidianPageObject";
+import { ObsidianPageObject } from "../helpers/ObsidianPageObject";
 
 test.describe("Data Collection Functionality", () => {
 	test("should scan files with novel tag and calculate character count", async ({

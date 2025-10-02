@@ -11,7 +11,7 @@ import log from "loglevel";
 import os from "os";
 import path from "path";
 import type { ElectronApplication, Page } from "playwright";
-import { SANDBOX_VAULT_NAME } from "../../../constants";
+import { SANDBOX_VAULT_NAME } from "../../constants";
 import { IPCBridge } from "../IPCBridge";
 import { PageManager } from "./PageManager";
 import { PluginManager } from "./PluginManager";

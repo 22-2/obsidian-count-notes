@@ -5,13 +5,13 @@ import "./logger-setup";
 // Example Test (example.test.mts)
 // ===================================================================
 
+import { expect, test } from "../base";
 import {
 	CMD_ID_OPEN_COUNT_NOVELS_HOME,
 	DIST_DIR,
 	PLUGIN_ID,
 	SANDBOX_VAULT_NAME,
-} from "../../constants";
-import { expect, test } from "../../base";
+} from "../constants";
 import { ObsidianPageObject } from "../helpers/ObsidianPageObject"; // Import ObsidianPageObject
 
 test("sandbox test: plugin activation and view creation via command", async ({
