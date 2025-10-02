@@ -1,4 +1,5 @@
 import { TFile } from "obsidian";
+import { splitMd } from "src/utils/markdwon";
 import type CountNovelsPlugin from "../main";
 import { VIEW_TYPE_COUNT_NOVEL } from "../utils/constants";
 
@@ -84,8 +85,10 @@ export class DataCollectionService {
 	 */
 	async countCharactersInFile(file: TFile): Promise<number> {
 		try {
-			const content = await this.plugin.app.vault.read(file);
-			return this.countCharacters(content);
+			const fileData = splitMd(
+				await this.plugin.app.vault.cachedRead(file)
+			);
+			return this.countCharacters(fileData.content);
 		} catch (error) {
 			console.warn(
 				`Count Novels: Error reading file ${file.path}:`,
@@ -185,7 +188,10 @@ export class DataCollectionService {
 		this.plugin.app.workspace.iterateAllLeaves((leaf) => {
 			if (leaf.view.getViewType() === VIEW_TYPE_COUNT_NOVEL) {
 				const view = leaf.view as any; // CountNovelHomeの型を使用
-				if (view.refreshSummary && typeof view.refreshSummary === 'function') {
+				if (
+					view.refreshSummary &&
+					typeof view.refreshSummary === "function"
+				) {
 					view.refreshSummary();
 				}
 			}
