@@ -110,12 +110,12 @@ jobs:
                   npx @telosh/filetree --exclude node_modules,.git
 
             - name: Run Playwright example tests
-              run: pnpm run test:e2e:example
+              run: pnpm playwright test e2e/specs/setup/example.spec.ts --project=chromium
               env:
                   DEBUG: "pw:browser"
 
             - name: Run Data Collection E2E tests
-              run: pnpm run test:e2e:data-collection
+              run: pnpm playwright test e2e/specs/data-collection.spec.ts --project=chromium
               env:
                   DEBUG: "pw:browser"
 
