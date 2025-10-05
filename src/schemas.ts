@@ -63,6 +63,19 @@ export const CountNovelViewStateSchema = z.object({
 });
 
 /**
+ * 時間単位の統計のzodスキーマ（YYYY-MM-DD-HH形式、HHは00-23）
+ */
+export const HourlyStatsSchema = z.record(
+	z
+		.string()
+		.regex(
+			/^\d{4}-\d{2}-\d{2}-\d{1,2}$/,
+			"Time slot must be in YYYY-MM-DD-HH format (HH: 0-23)"
+		),
+	z.number().int()
+);
+
+/**
  * プラグインデータのzodスキーマ
  */
 export const PluginDataSchema = z.object({
@@ -70,6 +83,7 @@ export const PluginDataSchema = z.object({
 	lastTotalCharacterCount: z.number().int().min(0),
 	lastViewState: ViewStateSchema.optional(),
 	dailyStats: z.record(DateStringSchema, z.number().int()),
+	hourlyStats: HourlyStatsSchema.optional(), // 後方互換性のためoptional
 });
 
 // 型定義（zodスキーマから自動生成）
@@ -80,6 +94,7 @@ export type ChartDataPoint = z.infer<typeof ChartDataPointSchema>;
 export type CountNovelsSettings = z.infer<typeof CountNovelsSettingsSchema>;
 export type ViewState = z.infer<typeof ViewStateSchema>;
 export type CountNovelViewState = z.infer<typeof CountNovelViewStateSchema>;
+export type HourlyStats = z.infer<typeof HourlyStatsSchema>;
 export type PluginData = z.infer<typeof PluginDataSchema>;
 
 /**
@@ -133,7 +148,9 @@ export const validatePeriodType = (period: string): period is PeriodType => {
 /**
  * 設定バリデーション用のヘルパー関数
  */
-export const validateSettings = (settings: unknown): CountNovelsSettings | null => {
+export const validateSettings = (
+	settings: unknown
+): CountNovelsSettings | null => {
 	const result = CountNovelsSettingsSchema.safeParse(settings);
 	return result.success ? result.data : null;
 };

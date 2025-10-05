@@ -52,9 +52,35 @@ export class PeriodDataService {
 		const todayCount = pluginData.dailyStats[todayString] || 0;
 		const streak = this.calculateStreak();
 
+		// 4時間単位の平均を計算（1時間単位のデータを4時間単位にまとめる）
+		let average = 0;
+		if (pluginData.hourlyStats) {
+			const fourHourSlots = [];
+
+			// 4時間単位でグループ化（0-3, 4-7, 8-11, 12-15, 16-19, 20-23）
+			for (let slotStart = 0; slotStart < 24; slotStart += 4) {
+				let slotTotal = 0;
+
+				// 各4時間スロット内の1時間単位のデータを合計
+				for (let hour = slotStart; hour < slotStart + 4; hour++) {
+					const timeSlotKey = `${todayString}-${hour}`;
+					slotTotal += pluginData.hourlyStats[timeSlotKey] || 0;
+				}
+
+				if (slotTotal > 0) {
+					fourHourSlots.push(slotTotal);
+				}
+			}
+
+			if (fourHourSlots.length > 0) {
+				const sum = fourHourSlots.reduce((acc, val) => acc + val, 0);
+				average = Math.round(sum / fourHourSlots.length);
+			}
+		}
+
 		return {
 			total: Math.max(0, todayCount),
-			average: Math.max(0, todayCount),
+			average: Math.max(0, average),
 			streak,
 			periodLabel: "今日",
 		};
@@ -134,35 +160,28 @@ export class PeriodDataService {
 		const todayString = this.formatDateString(today);
 		const pluginData = this.dataStorage.getData();
 
-		if (!pluginData?.dailyStats) {
+		if (!pluginData?.hourlyStats) {
 			// データがない場合でも4時間単位のスロットを表示
 			return this.generateEmptyDaySlots();
 		}
 
-		// 今日のデータを4時間単位で分割表示（仮想的な分割）
-		// 実際のデータは日単位なので、今日の総文字数を時間帯に分散表示
-		const todayCount = pluginData.dailyStats[todayString] || 0;
 		const chartData: ChartDataPoint[] = [];
 
 		// 4時間単位で6つのスロット（0-4, 4-8, 8-12, 12-16, 16-20, 20-24）
-		for (let hour = 0; hour < 24; hour += 4) {
-			const endHour = hour + 4;
-			const label = `${hour}h`;
+		for (let slotStart = 0; slotStart < 24; slotStart += 4) {
+			const label = `${slotStart}h`;
+			let slotTotal = 0;
 
-			// 現在時刻に基づいて値を分散（簡易実装）
-			let value = 0;
-			if (todayCount > 0) {
-				const currentHour = new Date().getHours();
-				if (hour <= currentHour && currentHour < endHour) {
-					// 現在の時間帯に全ての文字数を表示
-					value = todayCount;
-				}
+			// 各4時間スロット内の1時間単位のデータを合計
+			for (let hour = slotStart; hour < slotStart + 4; hour++) {
+				const timeSlotKey = `${todayString}-${hour}`;
+				slotTotal += pluginData.hourlyStats[timeSlotKey] || 0;
 			}
 
 			chartData.push({
 				label,
-				value,
-				date: `${todayString}-${hour}`,
+				value: Math.max(0, slotTotal),
+				date: `${todayString}-${slotStart}`,
 			});
 		}
 

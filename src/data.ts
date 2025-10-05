@@ -2,8 +2,8 @@ import type CountNovelsPlugin from "./main";
 import {
 	PluginDataSchema,
 	validateDateString,
-	type PluginData,
 	type PeriodType,
+	type PluginData,
 } from "./schemas";
 
 /**
@@ -96,6 +96,7 @@ export class DataStorage {
 				period: "month",
 			},
 			dailyStats: {},
+			hourlyStats: {},
 		};
 	}
 
@@ -208,5 +209,40 @@ export class DataStorage {
 		}
 
 		this.data.lastViewState = { period };
+	}
+
+	/**
+	 * 時間単位の統計を更新する
+	 */
+	updateHourlyStats(date: string, characterDiff: number): void {
+		// 日付形式のバリデーション
+		if (!validateDateString(date)) {
+			throw new Error(
+				`Invalid date format: ${date}. Expected YYYY-MM-DD format.`
+			);
+		}
+
+		// 文字数差分のバリデーション
+		if (!Number.isInteger(characterDiff)) {
+			throw new Error(
+				`Character diff must be an integer: ${characterDiff}`
+			);
+		}
+
+		if (!this.data) {
+			this.data = this.createInitialData();
+		}
+
+		// hourlyStatsが存在しない場合は初期化
+		if (!this.data.hourlyStats) {
+			this.data.hourlyStats = {};
+		}
+
+		// 現在の時刻を取得
+		const currentHour = new Date().getHours();
+		const timeSlotKey = `${date}-${currentHour}`;
+
+		const existingValue = this.data.hourlyStats[timeSlotKey] || 0;
+		this.data.hourlyStats[timeSlotKey] = existingValue + characterDiff;
 	}
 }

@@ -166,6 +166,7 @@ export class DataCollectionService {
 
 			// 差分を記録（要件2.3, 2.4, 2.5に対応）
 			this.plugin.dataStorage.updateDailyStats(today, difference);
+			this.plugin.dataStorage.updateHourlyStats(today, difference);
 			this.plugin.dataStorage.updateLastTotalCharacterCount(currentTotal);
 
 			// データを保存

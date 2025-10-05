@@ -22,6 +22,15 @@ export class StatsComponent {
 				stats.total.toLocaleString(),
 				"文字"
 			);
+			// 平均が0より大きい場合のみ表示
+			if (stats.average > 0) {
+				this.createSummaryItem(
+					summaryContent,
+					"4時間の平均",
+					stats.average.toLocaleString(),
+					"文字"
+				);
+			}
 			this.createSummaryItem(
 				summaryContent,
 				"継続日数",
