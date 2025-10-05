@@ -1,4 +1,4 @@
-import { CMD_ID_UNDO_CLOSE_TAB } from "e2e/constants";
+import { CMD_ID_CLOSE_TAB, CMD_ID_UNDO_CLOSE_TAB } from "e2e/constants";
 import type { JSHandle, Locator, Page } from "playwright";
 import { expect } from "playwright/test";
 import type { VaultOptions } from "./managers/VaultManager";
@@ -101,12 +101,6 @@ export class ObsidianPageObject {
 		expect(success).toBe(true);
 	}
 
-	async typeInActiveEditor(content: string): Promise<void> {
-		await this.activeEditor.focus();
-		await this.page.keyboard.type(content);
-		await expect(this.activeEditor).toHaveText(content);
-	}
-
 	async clearActiveEditor(): Promise<void> {
 		await this.activeEditor.focus();
 		await this.page.keyboard.press("Control+A");
@@ -128,7 +122,17 @@ export class ObsidianPageObject {
 	}
 
 	async closeActiveTab(): Promise<void> {
-		await this.page.evaluate(() => app.workspace.activeLeaf?.detach());
+		await this.activeEditor.focus();
+		await this.runCommand(CMD_ID_CLOSE_TAB);
+	}
+
+	async clickCloseButtonOnActiveTab(): Promise<void> {
+		// アクティブなタブヘッダーの中にある .workspace-tab-header-inner-close-button を探す
+		const closeButton = this.page.locator(
+			`${this.ACTIVE_TAB_HEADER} .workspace-tab-header-inner-close-button`
+		);
+		await expect(closeButton).toBeVisible();
+		await closeButton.click();
 	}
 
 	async undoCloseTab(): Promise<void> {
@@ -327,12 +331,17 @@ export class CustomViewPageObject extends ObsidianPageObject {
 		return this.getTitleByType(this.customViewType);
 	}
 
+	async setActiveEditorContent(content: string): Promise<void> {
+		await this.activeEditor.focus();
+		await this.activeEditor.fill(content);
+	}
+
 	async openCustomView(commandId: string, content?: string): Promise<void> {
 		await this.runCommand(commandId);
 		await expect(this.activeCustomView.last()).toBeVisible();
 
 		if (content) {
-			await this.typeInActiveEditor(content);
+			await this.setActiveEditorContent(content);
 		}
 	}
 
