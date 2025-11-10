@@ -1,9 +1,5 @@
 import type CountNovelsPlugin from "./main";
-import {
-	PluginDataSchema,
-	type PeriodType,
-	type PluginData,
-} from "./schemas";
+import { PluginDataSchema, type PeriodType, type PluginData } from "./schemas";
 
 /**
  * データストレージクラス
@@ -24,29 +20,11 @@ export class DataStorage {
 		try {
 			const loadedData = await this.plugin.loadData();
 
-			if (loadedData) {
-				const validationResult = PluginDataSchema.safeParse(loadedData);
-
-				if (validationResult.success) {
-					this.data = validationResult.data;
-					return this.data;
-				} else {
-					console.warn(
-						"Count Novels: Data validation failed:",
-						validationResult.error.issues
-					);
-					this.data = this.createInitialData();
-					await this.saveData();
-					return this.data;
-				}
-			} else {
-				console.log(
-					"Count Novels: No existing data found, creating initial data structure"
-				);
-				this.data = this.createInitialData();
-				await this.saveData();
-				return this.data;
+			if (!loadedData) {
+				return this.initializeData();
 			}
+
+			return this.validateAndLoadData(loadedData);
 		} catch (error) {
 			console.error(
 				"Count Novels: Failed to load data, using initial state:",
@@ -55,6 +33,38 @@ export class DataStorage {
 			this.data = this.createInitialData();
 			return this.data;
 		}
+	}
+
+	/**
+	 * 読み込んだデータをバリデーションして返す
+	 */
+	private async validateAndLoadData(
+		loadedData: unknown
+	): Promise<PluginData> {
+		const validationResult = PluginDataSchema.safeParse(loadedData);
+
+		if (validationResult.success) {
+			this.data = validationResult.data;
+			return this.data;
+		}
+
+		console.warn(
+			"Count Novels: Data validation failed:",
+			validationResult.error.issues
+		);
+		return this.initializeData();
+	}
+
+	/**
+	 * 初期データを作成して保存する
+	 */
+	private async initializeData(): Promise<PluginData> {
+		console.log(
+			"Count Novels: No existing data found, creating initial data structure"
+		);
+		this.data = this.createInitialData();
+		await this.saveData();
+		return this.data;
 	}
 
 	/**
@@ -94,17 +104,30 @@ export class DataStorage {
 	}
 
 	/**
-	 * ビュー状態を更新する（バリデーション付き）
+	 * ビュー状態を更新する(バリデーション付き)
 	 */
 	updateViewState(period: PeriodType): void {
-		if (!["day", "week", "month", "year"].includes(period)) {
+		this.validatePeriod(period);
+		this.ensureDataInitialized();
+		this.data!.lastViewState = { period };
+	}
+
+	/**
+	 * 期間タイプをバリデーションする
+	 */
+	private validatePeriod(period: PeriodType): void {
+		const validPeriods: PeriodType[] = ["day", "week", "month", "year"];
+		if (!validPeriods.includes(period)) {
 			throw new Error(`Invalid period: ${period}`);
 		}
+	}
 
+	/**
+	 * データが初期化されていることを保証する
+	 */
+	private ensureDataInitialized(): void {
 		if (!this.data) {
 			this.data = this.createInitialData();
 		}
-
-		this.data.lastViewState = { period };
 	}
 }
