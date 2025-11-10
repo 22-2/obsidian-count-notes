@@ -5,7 +5,7 @@ import type {
 	PeriodStats,
 	PeriodType,
 } from "../schemas";
-import type { StatsStorage } from "./StatsStorage";
+import type { StatsStorage } from "./statsStorage";
 
 export class PeriodDataService {
 	private static readonly HOURS_PER_SLOT = 4;

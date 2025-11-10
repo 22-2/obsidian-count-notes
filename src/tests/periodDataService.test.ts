@@ -1,5 +1,5 @@
 import { PeriodDataService } from "../services/periodDataService";
-import type { StatsStorage } from "../services/StatsStorage";
+import type { StatsStorage } from "../services/statsStorage";
 
 // モックStatsStorage
 class MockStatsStorage implements Partial<StatsStorage> {

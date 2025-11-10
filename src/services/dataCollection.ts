@@ -2,7 +2,7 @@ import { TFile } from "obsidian";
 import { splitMd } from "src/utils/markdwon";
 import type CountNovelsPlugin from "../main";
 import { VIEW_TYPE_COUNT_NOVEL } from "../utils/constants";
-import type { StatsStorage } from "./StatsStorage";
+import type { StatsStorage } from "./statsStorage";
 
 /**
  * データ収集サービス

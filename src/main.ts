@@ -2,12 +2,9 @@ import log from "loglevel";
 import { Plugin } from "obsidian";
 import { CountNovelView } from "./CountNovelView";
 import { DataStorage } from "./data";
-import {
-	DEFAULT_SETTINGS,
-	type CountNovelsSettings,
-} from "./schemas";
+import { DEFAULT_SETTINGS, type CountNovelsSettings } from "./schemas";
 import { DataCollectionService } from "./services/dataCollection";
-import { StatsStorage } from "./services/StatsStorage";
+import { StatsStorage } from "./services/statsStorage";
 import { CountNovelsSettingTab } from "./settings";
 import { VIEW_TYPE_COUNT_NOVEL } from "./utils/constants";
 
@@ -66,8 +63,10 @@ export default class CountNovelsPlugin extends Plugin {
 	private async openCountNovelsView(): Promise<void> {
 		try {
 			// 既存のビューがあるかチェック
-			const existingLeaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_COUNT_NOVEL)[0];
-			
+			const existingLeaf = this.app.workspace.getLeavesOfType(
+				VIEW_TYPE_COUNT_NOVEL
+			)[0];
+
 			if (existingLeaf) {
 				// 既存のビューをアクティブにする
 				this.app.workspace.revealLeaf(existingLeaf);
