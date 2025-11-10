@@ -2,17 +2,19 @@ import log from "loglevel";
 import { Plugin } from "obsidian";
 import { CountNovelView } from "./CountNovelView";
 import { DataStorage } from "./data";
-import { DataCollectionService } from "./services/dataCollection";
-import { CountNovelsSettingTab } from "./settings";
 import {
 	DEFAULT_SETTINGS,
 	type CountNovelsSettings,
 } from "./schemas";
+import { DataCollectionService } from "./services/dataCollection";
+import { StatsStorage } from "./services/StatsStorage";
+import { CountNovelsSettingTab } from "./settings";
 import { VIEW_TYPE_COUNT_NOVEL } from "./utils/constants";
 
 export default class CountNovelsPlugin extends Plugin {
 	settings: CountNovelsSettings = DEFAULT_SETTINGS;
 	dataStorage!: DataStorage;
+	statsStorage!: StatsStorage;
 	dataCollectionService!: DataCollectionService;
 	private intervalId?: number;
 
@@ -28,7 +30,11 @@ export default class CountNovelsPlugin extends Plugin {
 
 	private async initializeServices(): Promise<void> {
 		this.dataStorage = new DataStorage(this);
-		this.dataCollectionService = new DataCollectionService(this);
+		this.statsStorage = new StatsStorage();
+		this.dataCollectionService = new DataCollectionService(
+			this,
+			this.statsStorage
+		);
 		await this.loadSettings();
 		this.configureLogging();
 	}

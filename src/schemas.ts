@@ -76,14 +76,17 @@ export const HourlyStatsSchema = z.record(
 );
 
 /**
- * プラグインデータのzodスキーマ
+ * 日次統計のzodスキーマ
+ */
+export const DailyStatsSchema = z.record(DateStringSchema, z.number().int());
+
+/**
+ * プラグインデータ（data.json）のzodスキーマ
+ * 設定とビューの状態のみを保持
  */
 export const PluginDataSchema = z.object({
 	settings: CountNovelsSettingsSchema,
-	lastTotalCharacterCount: z.number().int().min(0),
 	lastViewState: ViewStateSchema.optional(),
-	dailyStats: z.record(DateStringSchema, z.number().int()),
-	hourlyStats: HourlyStatsSchema.optional(), // 後方互換性のためoptional
 });
 
 // 型定義（zodスキーマから自動生成）
@@ -94,6 +97,7 @@ export type ChartDataPoint = z.infer<typeof ChartDataPointSchema>;
 export type CountNovelsSettings = z.infer<typeof CountNovelsSettingsSchema>;
 export type ViewState = z.infer<typeof ViewStateSchema>;
 export type CountNovelViewState = z.infer<typeof CountNovelViewStateSchema>;
+export type DailyStats = z.infer<typeof DailyStatsSchema>;
 export type HourlyStats = z.infer<typeof HourlyStatsSchema>;
 export type PluginData = z.infer<typeof PluginDataSchema>;
 

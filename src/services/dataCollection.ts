@@ -2,6 +2,7 @@ import { TFile } from "obsidian";
 import { splitMd } from "src/utils/markdwon";
 import type CountNovelsPlugin from "../main";
 import { VIEW_TYPE_COUNT_NOVEL } from "../utils/constants";
+import type { StatsStorage } from "./StatsStorage";
 
 /**
  * データ収集サービス
@@ -9,9 +10,11 @@ import { VIEW_TYPE_COUNT_NOVEL } from "../utils/constants";
  */
 export class DataCollectionService {
 	private plugin: CountNovelsPlugin;
+	private statsStorage: StatsStorage;
 
-	constructor(plugin: CountNovelsPlugin) {
+	constructor(plugin: CountNovelsPlugin, statsStorage: StatsStorage) {
 		this.plugin = plugin;
+		this.statsStorage = statsStorage;
 	}
 
 	/**
@@ -143,36 +146,28 @@ export class DataCollectionService {
 	async collectData(): Promise<void> {
 		try {
 			const currentTotal = await this.calculateTotalCharacterCount();
-
-			// データストレージから現在のデータを取得
-			const pluginData = this.plugin.dataStorage.getData();
-			if (!pluginData) {
-				console.error("Count Novels: Plugin data not initialized");
-				return;
-			}
-
-			const previousTotal = pluginData.lastTotalCharacterCount;
+			const previousTotal =
+				await this.statsStorage.getLastTotalCharacterCount();
 			const difference = currentTotal - previousTotal;
 
 			console.log(
 				`Count Novels: Previous total: ${previousTotal}, Current total: ${currentTotal}, Difference: ${difference}`
 			);
 
-			// 今日の日付を取得（YYYY-MM-DD形式、ローカル時間）
+			if (difference === 0) {
+				console.log("Count Novels: No change in character count.");
+				return;
+			}
+
 			const now = new Date();
 			const today = `${now.getFullYear()}-${String(
 				now.getMonth() + 1
 			).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
-			// 差分を記録（要件2.3, 2.4, 2.5に対応）
-			this.plugin.dataStorage.updateDailyStats(today, difference);
-			this.plugin.dataStorage.updateHourlyStats(today, difference);
-			this.plugin.dataStorage.updateLastTotalCharacterCount(currentTotal);
+			await this.statsStorage.updateDailyStats(today, difference);
+			await this.statsStorage.updateHourlyStats(today, difference);
+			await this.statsStorage.saveLastTotalCharacterCount(currentTotal);
 
-			// データを保存
-			await this.plugin.dataStorage.saveData();
-
-			// データ更新時にビューを更新
 			this.refreshViews();
 
 			console.log(
