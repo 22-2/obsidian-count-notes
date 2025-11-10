@@ -34,6 +34,10 @@ export class CountNovelView extends ItemView {
 		this.periodDataService = new PeriodDataService(plugin.dataStorage);
 	}
 
+	getIcon() {
+		return "chart-column-big";
+	}
+
 	getViewType() {
 		return VIEW_TYPE_COUNT_NOVEL;
 	}
