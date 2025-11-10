@@ -36,6 +36,14 @@ export class DataStorage {
 	}
 
 	/**
+	 * データの一部を更新する
+	 */
+	updateData(updatedFields: Partial<PluginData>): void {
+		this.ensureDataInitialized();
+		this.data = { ...this.data!, ...updatedFields };
+	}
+
+	/**
 	 * 読み込んだデータをバリデーションして返す
 	 */
 	private async validateAndLoadData(
