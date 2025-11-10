@@ -1,19 +1,21 @@
 import { DataStorage } from "../data";
 
-// モックプラグイン
+const mockIdb = {
+	loadData: jest.fn(),
+	saveData: jest.fn(),
+};
+
+jest.mock("../idb", () => ({
+	Idb: jest.fn().mockImplementation(() => mockIdb),
+}));
+
 class MockPlugin {
 	settings = {
 		logLevel: "debug" as const,
 		trackingTag: "novel",
 	};
-
-	async loadData() {
-		return null;
-	}
-
-	async saveData(data: any) {
-		// モック実装
-	}
+	loadData = jest.fn();
+	saveData = jest.fn();
 }
 
 describe("DataStorage - Hourly Stats", () => {
@@ -22,6 +24,8 @@ describe("DataStorage - Hourly Stats", () => {
 
 	beforeEach(async () => {
 		mockPlugin = new MockPlugin();
+		mockPlugin.loadData.mockResolvedValue(null);
+		mockIdb.loadData.mockResolvedValue(null);
 		dataStorage = new DataStorage(mockPlugin as any);
 		await dataStorage.loadData();
 	});
@@ -232,21 +236,17 @@ describe("DataStorage - Hourly Stats", () => {
 
 	describe("backward compatibility", () => {
 		test("should work with data that doesn't have hourlyStats", async () => {
-			// 古いデータ構造をシミュレート
-			const oldDataPlugin = {
-				...mockPlugin,
-				async loadData() {
-					return {
-						settings: mockPlugin.settings,
-						lastTotalCharacterCount: 1000,
-						lastViewState: { period: "month" },
-						dailyStats: { "2025-10-01": 500 },
-						// hourlyStats がない
-					};
-				},
-			};
+			mockPlugin.loadData.mockResolvedValue({
+				settings: mockPlugin.settings,
+				lastViewState: { period: "month" },
+			});
+			mockIdb.loadData.mockResolvedValue({
+				lastTotalCharacterCount: 1000,
+				dailyStats: { "2025-10-01": 500 },
+				hourlyStats: undefined,
+			});
 
-			const oldDataStorage = new DataStorage(oldDataPlugin as any);
+			const oldDataStorage = new DataStorage(mockPlugin as any);
 			await oldDataStorage.loadData();
 
 			// hourlyStatsを更新しても問題なく動作する

@@ -1,62 +1,52 @@
 import type CountNovelsPlugin from "./main";
+import { Idb } from "./idb";
 import {
 	PluginDataSchema,
+	PluginSettingsDataSchema,
+	PluginStatsDataSchema,
 	validateDateString,
 	type PeriodType,
 	type PluginData,
+	type PluginSettingsData,
+	type PluginStatsData,
 } from "./schemas";
 
-/**
- * データストレージクラス
- * data.jsonの読み込み・保存・初期化を管理
- */
 export class DataStorage {
 	private plugin: CountNovelsPlugin;
 	private data: PluginData | null = null;
+	private idb: Idb;
 
 	constructor(plugin: CountNovelsPlugin) {
 		this.plugin = plugin;
+		this.idb = new Idb();
 	}
 
-	/**
-	 * data.jsonからデータを読み込む
-	 * 要件5.2: loadData APIを使用してdata.jsonからデータを読み込む
-	 */
 	async loadData(): Promise<PluginData> {
 		try {
-			const loadedData = await this.plugin.loadData();
+			const loadedSettingsData = (await this.plugin.loadData()) ?? {};
+			const loadedStatsData = (await this.idb.loadData()) ?? {};
 
-			if (loadedData) {
-				// zodスキーマでバリデーション
-				const validationResult = PluginDataSchema.safeParse(loadedData);
+			const mergedData = { ...loadedSettingsData, ...loadedStatsData };
 
+			if (Object.keys(mergedData).length > 0) {
+				const validationResult = PluginDataSchema.safeParse(mergedData);
 				if (validationResult.success) {
 					this.data = validationResult.data;
 					return this.data;
-				} else {
-					// バリデーションエラーの詳細をログ出力
-					console.warn(
-						"Count Novels: Data validation failed:",
-						validationResult.error.issues
-					);
-					console.log(
-						"Count Novels: Creating initial data structure due to validation failure"
-					);
-					this.data = this.createInitialData();
-					await this.saveData();
-					return this.data;
 				}
-			} else {
-				// 要件5.4: data.jsonが存在しない場合は初期データ構造を作成
-				console.log(
-					"Count Novels: No existing data found, creating initial data structure"
+				console.warn(
+					"Count Novels: Data validation failed:",
+					validationResult.error.issues
 				);
-				this.data = this.createInitialData();
-				await this.saveData();
-				return this.data;
 			}
+
+			console.log(
+				"Count Novels: No existing data found or validation failed, creating initial data structure"
+			);
+			this.data = this.createInitialData();
+			await this.saveData();
+			return this.data;
 		} catch (error) {
-			// 要件5.5: データの読み込みに失敗した場合はエラーログを出力し、初期状態で動作
 			console.error(
 				"Count Novels: Failed to load data, using initial state:",
 				error
@@ -66,10 +56,6 @@ export class DataStorage {
 		}
 	}
 
-	/**
-	 * data.jsonにデータを保存する
-	 * 要件5.1: saveData APIを使用してdata.jsonに保存
-	 */
 	async saveData(): Promise<void> {
 		if (!this.data) {
 			console.error("Count Novels: No data to save");
@@ -77,17 +63,29 @@ export class DataStorage {
 		}
 
 		try {
-			await this.plugin.saveData(this.data);
+			const settingsData: PluginSettingsData = {
+				settings: this.data.settings,
+				lastViewState: this.data.lastViewState,
+			};
+
+			const statsData: PluginStatsData = {
+				lastTotalCharacterCount: this.data.lastTotalCharacterCount,
+				dailyStats: this.data.dailyStats,
+				hourlyStats: this.data.hourlyStats,
+			};
+
+			// zodスキーマでバリデーション
+			PluginSettingsDataSchema.parse(settingsData);
+			PluginStatsDataSchema.parse(statsData);
+
+			await this.plugin.saveData(settingsData);
+			await this.idb.saveData(statsData);
 		} catch (error) {
 			console.error("Count Novels: Failed to save data:", error);
 			throw error;
 		}
 	}
 
-	/**
-	 * 初期データ構造を作成する
-	 * 要件5.4: data.jsonが存在しない場合の初期データ構造作成
-	 */
 	private createInitialData(): PluginData {
 		return {
 			settings: this.plugin.settings,
