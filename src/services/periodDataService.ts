@@ -1,22 +1,31 @@
-import type { DataStorage } from "../data";
-import type { ChartDataPoint, PeriodStats, PeriodType } from "../schemas";
+import type {
+	ChartDataPoint,
+	DailyStats,
+	HourlyStats,
+	PeriodStats,
+	PeriodType,
+} from "../schemas";
+import type { StatsStorage } from "./StatsStorage";
 
 export class PeriodDataService {
-	constructor(private dataStorage: DataStorage) {}
+	constructor(private statsStorage: StatsStorage) {}
 
 	/**
 	 * 指定された期間タイプの統計データを取得
 	 */
-	getPeriodStats(periodType: PeriodType): PeriodStats {
+	async getPeriodStats(periodType: PeriodType): Promise<PeriodStats> {
+		const dailyStats = await this.statsStorage.getDailyStats();
+		const hourlyStats = await this.statsStorage.getHourlyStats();
+
 		switch (periodType) {
 			case "day":
-				return this.getDayStats();
+				return this.getDayStats(dailyStats, hourlyStats);
 			case "week":
-				return this.getWeekStats();
+				return this.getWeekStats(dailyStats);
 			case "month":
-				return this.getMonthStats();
+				return this.getMonthStats(dailyStats);
 			case "year":
-				return this.getYearStats();
+				return this.getYearStats(dailyStats);
 			default:
 				throw new Error(`Unsupported period type: ${periodType}`);
 		}
@@ -25,48 +34,48 @@ export class PeriodDataService {
 	/**
 	 * 指定された期間タイプのチャートデータを取得
 	 */
-	getChartData(periodType: PeriodType): ChartDataPoint[] {
+	async getChartData(periodType: PeriodType): Promise<ChartDataPoint[]> {
+		const dailyStats = await this.statsStorage.getDailyStats();
+		const hourlyStats = await this.statsStorage.getHourlyStats();
+
 		switch (periodType) {
 			case "day":
-				return this.getDayChartData();
+				return this.getDayChartData(hourlyStats);
 			case "week":
-				return this.getWeekChartData();
+				return this.getWeekChartData(dailyStats);
 			case "month":
-				return this.getMonthChartData();
+				return this.getMonthChartData(dailyStats);
 			case "year":
-				return this.getYearChartData();
+				return this.getYearChartData(dailyStats);
 			default:
 				throw new Error(`Unsupported period type: ${periodType}`);
 		}
 	}
 
-	private getDayStats(): PeriodStats {
+	private getDayStats(
+		dailyStats: DailyStats,
+		hourlyStats: HourlyStats
+	): PeriodStats {
 		const today = new Date();
 		const todayString = this.formatDateString(today);
-		const pluginData = this.dataStorage.getData();
 
-		if (!pluginData?.dailyStats) {
+		if (!dailyStats) {
 			return { total: 0, average: 0, streak: 0, periodLabel: "今日" };
 		}
 
-		const todayCount = pluginData.dailyStats[todayString] || 0;
-		const streak = this.calculateStreak();
+		const todayCount = dailyStats[todayString] || 0;
+		const streak = this.calculateStreak(dailyStats);
 
-		// 4時間単位の平均を計算（1時間単位のデータを4時間単位にまとめる）
 		let average = 0;
-		if (pluginData.hourlyStats) {
+		if (hourlyStats) {
 			const fourHourSlots = [];
 
-			// 4時間単位でグループ化（0-3, 4-7, 8-11, 12-15, 16-19, 20-23）
 			for (let slotStart = 0; slotStart < 24; slotStart += 4) {
 				let slotTotal = 0;
-
-				// 各4時間スロット内の1時間単位のデータを合計
 				for (let hour = slotStart; hour < slotStart + 4; hour++) {
 					const timeSlotKey = `${todayString}-${hour}`;
-					slotTotal += pluginData.hourlyStats[timeSlotKey] || 0;
+					slotTotal += hourlyStats[timeSlotKey] || 0;
 				}
-
 				if (slotTotal > 0) {
 					fourHourSlots.push(slotTotal);
 				}
@@ -86,20 +95,19 @@ export class PeriodDataService {
 		};
 	}
 
-	private getWeekStats(): PeriodStats {
-		const pluginData = this.dataStorage.getData();
-		if (!pluginData?.dailyStats) {
+	private getWeekStats(dailyStats: DailyStats): PeriodStats {
+		if (!dailyStats) {
 			return { total: 0, average: 0, streak: 0, periodLabel: "今週" };
 		}
 
-		const weekData = this.getCurrentWeekData();
+		const weekData = this.getCurrentWeekData(dailyStats);
 		const total = weekData.reduce(
 			(sum, [, count]) => sum + Math.max(0, count),
 			0
 		);
 		const writingDays = weekData.filter(([, count]) => count > 0).length;
 		const average = writingDays > 0 ? Math.round(total / writingDays) : 0;
-		const streak = this.calculateStreak();
+		const streak = this.calculateStreak(dailyStats);
 
 		return {
 			total,
@@ -109,20 +117,19 @@ export class PeriodDataService {
 		};
 	}
 
-	private getMonthStats(): PeriodStats {
-		const pluginData = this.dataStorage.getData();
-		if (!pluginData?.dailyStats) {
+	private getMonthStats(dailyStats: DailyStats): PeriodStats {
+		if (!dailyStats) {
 			return { total: 0, average: 0, streak: 0, periodLabel: "今月" };
 		}
 
-		const monthData = this.getCurrentMonthData();
+		const monthData = this.getCurrentMonthData(dailyStats);
 		const total = monthData.reduce(
 			(sum, [, count]) => sum + Math.max(0, count),
 			0
 		);
 		const writingDays = monthData.filter(([, count]) => count > 0).length;
 		const average = writingDays > 0 ? Math.round(total / writingDays) : 0;
-		const streak = this.calculateStreak();
+		const streak = this.calculateStreak(dailyStats);
 
 		return {
 			total,
@@ -132,20 +139,19 @@ export class PeriodDataService {
 		};
 	}
 
-	private getYearStats(): PeriodStats {
-		const pluginData = this.dataStorage.getData();
-		if (!pluginData?.dailyStats) {
+	private getYearStats(dailyStats: DailyStats): PeriodStats {
+		if (!dailyStats) {
 			return { total: 0, average: 0, streak: 0, periodLabel: "今年" };
 		}
 
-		const yearData = this.getCurrentYearData();
+		const yearData = this.getCurrentYearData(dailyStats);
 		const total = yearData.reduce(
 			(sum, [, count]) => sum + Math.max(0, count),
 			0
 		);
 		const writingDays = yearData.filter(([, count]) => count > 0).length;
 		const average = writingDays > 0 ? Math.round(total / writingDays) : 0;
-		const streak = this.calculateStreak();
+		const streak = this.calculateStreak(dailyStats);
 
 		return {
 			total,
@@ -155,29 +161,23 @@ export class PeriodDataService {
 		};
 	}
 
-	private getDayChartData(): ChartDataPoint[] {
+	private getDayChartData(hourlyStats: HourlyStats): ChartDataPoint[] {
 		const today = new Date();
 		const todayString = this.formatDateString(today);
-		const pluginData = this.dataStorage.getData();
 
-		if (!pluginData?.hourlyStats) {
-			// データがない場合でも4時間単位のスロットを表示
+		if (!hourlyStats) {
 			return this.generateEmptyDaySlots();
 		}
 
 		const chartData: ChartDataPoint[] = [];
 
-		// 4時間単位で6つのスロット（0-4, 4-8, 8-12, 12-16, 16-20, 20-24）
 		for (let slotStart = 0; slotStart < 24; slotStart += 4) {
 			const label = `${slotStart}h`;
 			let slotTotal = 0;
-
-			// 各4時間スロット内の1時間単位のデータを合計
 			for (let hour = slotStart; hour < slotStart + 4; hour++) {
 				const timeSlotKey = `${todayString}-${hour}`;
-				slotTotal += pluginData.hourlyStats[timeSlotKey] || 0;
+				slotTotal += hourlyStats[timeSlotKey] || 0;
 			}
-
 			chartData.push({
 				label,
 				value: Math.max(0, slotTotal),
@@ -194,9 +194,7 @@ export class PeriodDataService {
 		const chartData: ChartDataPoint[] = [];
 
 		for (let hour = 0; hour < 24; hour += 4) {
-			const endHour = hour + 4;
 			const label = `${hour}h`;
-
 			chartData.push({
 				label,
 				value: 0,
@@ -207,8 +205,8 @@ export class PeriodDataService {
 		return chartData;
 	}
 
-	private getWeekChartData(): ChartDataPoint[] {
-		const weekData = this.getCurrentWeekData();
+	private getWeekChartData(dailyStats: DailyStats): ChartDataPoint[] {
+		const weekData = this.getCurrentWeekData(dailyStats);
 
 		return weekData.map(([dateString, count]) => {
 			const date = new Date(dateString);
@@ -224,34 +222,27 @@ export class PeriodDataService {
 		});
 	}
 
-	private getMonthChartData(): ChartDataPoint[] {
+	private getMonthChartData(dailyStats: DailyStats): ChartDataPoint[] {
 		const currentDate = new Date();
 		const currentYear = currentDate.getFullYear();
 		const currentMonth = currentDate.getMonth() + 1;
 		const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
-		const pluginData = this.dataStorage.getData();
-
 		const chartData: ChartDataPoint[] = [];
 
-		// 5日単位でグループ化
 		for (let startDay = 1; startDay <= daysInMonth; startDay += 5) {
 			const endDay = Math.min(startDay + 4, daysInMonth);
 			let totalCount = 0;
-
-			// 5日間の合計を計算
 			for (let day = startDay; day <= endDay; day++) {
 				const dateKey = `${currentYear}-${currentMonth
 					.toString()
 					.padStart(2, "0")}-${day.toString().padStart(2, "0")}`;
-				const dayCount = pluginData?.dailyStats?.[dateKey] || 0;
+				const dayCount = dailyStats?.[dateKey] || 0;
 				totalCount += Math.max(0, dayCount);
 			}
-
 			const label =
 				startDay === endDay
 					? `${startDay}日`
 					: `${startDay}-${endDay}日`;
-
 			chartData.push({
 				label,
 				value: totalCount,
@@ -264,12 +255,9 @@ export class PeriodDataService {
 		return chartData;
 	}
 
-	private getYearChartData(): ChartDataPoint[] {
+	private getYearChartData(dailyStats: DailyStats): ChartDataPoint[] {
 		const currentYear = new Date().getFullYear();
-		const pluginData = this.dataStorage.getData();
 		const chartData: ChartDataPoint[] = [];
-
-		// 3ヶ月単位でグループ化（四半期）
 		const quarters = [
 			{ months: [1, 2, 3], label: "Q1" },
 			{ months: [4, 5, 6], label: "Q2" },
@@ -279,14 +267,12 @@ export class PeriodDataService {
 
 		quarters.forEach((quarter) => {
 			let quarterTotal = 0;
-
 			quarter.months.forEach((month) => {
 				const monthPrefix = `${currentYear}-${month
 					.toString()
 					.padStart(2, "0")}`;
-
-				if (pluginData?.dailyStats) {
-					Object.entries(pluginData.dailyStats).forEach(
+				if (dailyStats) {
+					Object.entries(dailyStats).forEach(
 						([dateString, count]) => {
 							if (dateString.startsWith(monthPrefix)) {
 								quarterTotal += Math.max(0, count);
@@ -295,7 +281,6 @@ export class PeriodDataService {
 					);
 				}
 			});
-
 			chartData.push({
 				label: quarter.label,
 				value: quarterTotal,
@@ -308,32 +293,31 @@ export class PeriodDataService {
 		return chartData;
 	}
 
-	private getCurrentWeekData(): Array<[string, number]> {
-		const pluginData = this.dataStorage.getData();
-		if (!pluginData?.dailyStats) return [];
-
+	private getCurrentWeekData(
+		dailyStats: DailyStats
+	): Array<[string, number]> {
+		if (!dailyStats) return [];
 		const today = new Date();
-		const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, ...
+		const currentDay = today.getDay();
 		const startOfWeek = new Date(today);
-		startOfWeek.setDate(today.getDate() - currentDay); // 日曜日を週の開始とする
-
+		startOfWeek.setDate(today.getDate() - currentDay);
 		const weekData: Array<[string, number]> = [];
 
 		for (let i = 0; i < 7; i++) {
 			const date = new Date(startOfWeek);
 			date.setDate(startOfWeek.getDate() + i);
 			const dateString = this.formatDateString(date);
-			const count = pluginData.dailyStats[dateString] || 0;
+			const count = dailyStats[dateString] || 0;
 			weekData.push([dateString, count]);
 		}
 
 		return weekData;
 	}
 
-	private getCurrentMonthData(): Array<[string, number]> {
-		const pluginData = this.dataStorage.getData();
-		if (!pluginData?.dailyStats) return [];
-
+	private getCurrentMonthData(
+		dailyStats: DailyStats
+	): Array<[string, number]> {
+		if (!dailyStats) return [];
 		const currentDate = new Date();
 		const currentYear = currentDate.getFullYear();
 		const currentMonth = currentDate.getMonth() + 1;
@@ -341,54 +325,45 @@ export class PeriodDataService {
 			.toString()
 			.padStart(2, "0")}`;
 
-		return Object.entries(pluginData.dailyStats)
+		return Object.entries(dailyStats)
 			.filter(([date]) => date.startsWith(monthPrefix))
 			.sort(([a], [b]) => a.localeCompare(b));
 	}
 
-	private getCurrentYearData(): Array<[string, number]> {
-		const pluginData = this.dataStorage.getData();
-		if (!pluginData?.dailyStats) return [];
-
+	private getCurrentYearData(
+		dailyStats: DailyStats
+	): Array<[string, number]> {
+		if (!dailyStats) return [];
 		const currentYear = new Date().getFullYear();
 		const yearPrefix = currentYear.toString();
 
-		return Object.entries(pluginData.dailyStats)
+		return Object.entries(dailyStats)
 			.filter(([date]) => date.startsWith(yearPrefix))
 			.sort(([a], [b]) => a.localeCompare(b));
 	}
 
-	private calculateStreak(): number {
-		const pluginData = this.dataStorage.getData();
-		if (!pluginData?.dailyStats) return 0;
-
+	private calculateStreak(dailyStats: DailyStats): number {
+		if (!dailyStats) return 0;
 		const today = new Date();
 		let streak = 0;
 		let currentDate = new Date(today);
-
-		// 今日の執筆データがあるかチェック
 		const todayString = this.formatDateString(today);
-		const todayStats = pluginData.dailyStats[todayString];
+		const todayStats = dailyStats[todayString];
 		const hasTodayData = todayStats && todayStats > 0;
 
-		// 今日まだ執筆していない場合は昨日から開始
 		if (!hasTodayData) {
 			currentDate.setDate(currentDate.getDate() - 1);
 		}
 
-		// 遡って連続する執筆日数を計算
 		while (true) {
 			const dateString = this.formatDateString(currentDate);
-			const dayStats = pluginData.dailyStats[dateString];
-
+			const dayStats = dailyStats[dateString];
 			if (dayStats && dayStats > 0) {
 				streak++;
 				currentDate.setDate(currentDate.getDate() - 1);
 			} else {
 				break;
 			}
-
-			// 無限ループ防止（1年以上遡らない）
 			if (streak > 365) break;
 		}
 
