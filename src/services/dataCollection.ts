@@ -9,72 +9,27 @@ import type { StatsStorage } from "./StatsStorage";
  * ファイルスキャンと文字数集計機能を提供
  */
 export class DataCollectionService {
-	private plugin: CountNovelsPlugin;
-	private statsStorage: StatsStorage;
-
-	constructor(plugin: CountNovelsPlugin, statsStorage: StatsStorage) {
-		this.plugin = plugin;
-		this.statsStorage = statsStorage;
-	}
+	constructor(
+		private readonly plugin: CountNovelsPlugin,
+		private readonly statsStorage: StatsStorage
+	) {}
 
 	/**
 	 * 指定タグを持つファイルを検索する機能
 	 * 要件2.1: 指定タグを持つ全ファイルの合計文字数を計算する
 	 */
 	async findFilesWithTag(tag: string): Promise<TFile[]> {
-		if (!tag || tag.trim() === "") {
+		if (!this.isValidTag(tag)) {
 			console.warn("Count Novels: Empty tag provided for file search");
 			return [];
 		}
 
 		const files = this.plugin.app.vault.getMarkdownFiles();
-		const taggedFiles: TFile[] = [];
-
 		console.log(
 			`Count Novels: Scanning ${files.length} markdown files for tag "${tag}"`
 		);
 
-		for (const file of files) {
-			try {
-				const cache = this.plugin.app.metadataCache.getFileCache(file);
-				let hasTag = false;
-
-				// ファイル内のタグをチェック (e.g., #novel)
-				if (cache?.tags) {
-					hasTag = cache.tags.some(
-						(tagRef) => tagRef.tag === `#${tag}`
-					);
-					if (hasTag) {
-						taggedFiles.push(file);
-						console.log(
-							`Count Novels: Found tag "${tag}" in file: ${file.path}`
-						);
-					}
-				}
-
-				// フロントマターのタグもチェック (e.g., tags: [novel])
-				if (!hasTag && cache?.frontmatter?.tags) {
-					const frontmatterTags = Array.isArray(
-						cache.frontmatter.tags
-					)
-						? cache.frontmatter.tags
-						: [cache.frontmatter.tags];
-
-					hasTag = frontmatterTags.includes(tag);
-					if (hasTag) {
-						taggedFiles.push(file);
-						console.log(
-							`Count Novels: Found tag "${tag}" in frontmatter of file: ${file.path}`
-						);
-					}
-				}
-			} catch (error) {
-				console.warn(
-					`Count Novels: Error checking tags for file ${file.path}:`,
-					error
-				);
-			}
-		}
+		const taggedFiles = files.filter((file) => this.hasTag(file, tag));
 
 		console.log(
 			`Count Novels: Found ${taggedFiles.length} files with tag "${tag}"`
@@ -83,15 +38,75 @@ export class DataCollectionService {
 	}
 
 	/**
+	 * タグの妥当性をチェック
+	 */
+	private isValidTag(tag: string): boolean {
+		return tag?.trim() !== "";
+	}
+
+	/**
+	 * ファイルが指定タグを持つかチェック
+	 */
+	private hasTag(file: TFile, tag: string): boolean {
+		try {
+			const cache = this.plugin.app.metadataCache.getFileCache(file);
+
+			if (this.hasInlineTag(cache, tag)) {
+				console.log(
+					`Count Novels: Found tag "${tag}" in file: ${file.path}`
+				);
+				return true;
+			}
+
+			if (this.hasFrontmatterTag(cache, tag)) {
+				console.log(
+					`Count Novels: Found tag "${tag}" in frontmatter of file: ${file.path}`
+				);
+				return true;
+			}
+
+			return false;
+		} catch (error) {
+			console.warn(
+				`Count Novels: Error checking tags for file ${file.path}:`,
+				error
+			);
+			return false;
+		}
+	}
+
+	/**
+	 * インラインタグをチェック (#novel形式)
+	 */
+	private hasInlineTag(cache: any, tag: string): boolean {
+		return (
+			cache?.tags?.some((tagRef: any) => tagRef.tag === `#${tag}`) ??
+			false
+		);
+	}
+
+	/**
+	 * フロントマタータグをチェック (tags: [novel]形式)
+	 */
+	private hasFrontmatterTag(cache: any, tag: string): boolean {
+		const frontmatterTags = cache?.frontmatter?.tags;
+		if (!frontmatterTags) return false;
+
+		const tags = Array.isArray(frontmatterTags)
+			? frontmatterTags
+			: [frontmatterTags];
+		return tags.includes(tag);
+	}
+
+	/**
 	 * ファイル内容から文字数をカウントする機能
 	 * 要件2.2: 文字数を計算する
 	 */
 	async countCharactersInFile(file: TFile): Promise<number> {
 		try {
-			const fileData = splitMd(
-				await this.plugin.app.vault.cachedRead(file)
-			);
-			return this.countCharacters(fileData.content);
+			const content = await this.plugin.app.vault.cachedRead(file);
+			const { content: markdownContent } = splitMd(content);
+			return markdownContent.length;
 		} catch (error) {
 			console.warn(
 				`Count Novels: Error reading file ${file.path}:`,
@@ -102,29 +117,19 @@ export class DataCollectionService {
 	}
 
 	/**
-	 * 文字列の文字数をカウントする（シンプル版）
-	 * 設計書通りのシンプルな実装
-	 */
-	private countCharacters(content: string): number {
-		// MVPでは単純な文字数カウント
-		return content.length;
-	}
-
-	/**
 	 * 合計文字数を計算する機能
 	 * 要件2.1, 2.2: 指定タグを持つ全ファイルの合計文字数を計算する
 	 */
 	async calculateTotalCharacterCount(): Promise<number> {
-		const tag = this.plugin.settings.trackingTag;
-
 		try {
+			const tag = this.plugin.settings.trackingTag;
 			const taggedFiles = await this.findFilesWithTag(tag);
-			let totalCount = 0;
 
-			for (const file of taggedFiles) {
-				const characterCount = await this.countCharactersInFile(file);
-				totalCount += characterCount;
-			}
+			const counts = await Promise.all(
+				taggedFiles.map((file) => this.countCharactersInFile(file))
+			);
+
+			const totalCount = counts.reduce((sum, count) => sum + count, 0);
 
 			console.log(
 				`Count Novels: Total character count for tag "${tag}": ${totalCount}`
@@ -140,7 +145,7 @@ export class DataCollectionService {
 	}
 
 	/**
-	 * データ収集を実行する（メイン機能）
+	 * データ収集を実行する(メイン機能)
 	 * 要件2.1, 2.2: システムは指定タグを持つ全ファイルの合計文字数を計算する
 	 */
 	async collectData(): Promise<void> {
@@ -159,15 +164,8 @@ export class DataCollectionService {
 				return;
 			}
 
-			const now = new Date();
-			const today = `${now.getFullYear()}-${String(
-				now.getMonth() + 1
-			).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-
-			await this.statsStorage.updateDailyStats(today, difference);
-			await this.statsStorage.updateHourlyStats(today, difference);
-			await this.statsStorage.saveLastTotalCharacterCount(currentTotal);
-
+			const today = this.getTodayString();
+			await this.saveStats(today, difference, currentTotal);
 			this.refreshViews();
 
 			console.log(
@@ -179,37 +177,62 @@ export class DataCollectionService {
 	}
 
 	/**
+	 * 今日の日付を YYYY-MM-DD 形式で取得
+	 */
+	private getTodayString(): string {
+		const now = new Date();
+		const year = now.getFullYear();
+		const month = String(now.getMonth() + 1).padStart(2, "0");
+		const day = String(now.getDate()).padStart(2, "0");
+		return `${year}-${month}-${day}`;
+	}
+
+	/**
+	 * 統計データを保存
+	 */
+	private async saveStats(
+		date: string,
+		difference: number,
+		total: number
+	): Promise<void> {
+		await Promise.all([
+			this.statsStorage.updateDailyStats(date, difference),
+			this.statsStorage.updateHourlyStats(date, difference),
+			this.statsStorage.saveLastTotalCharacterCount(total),
+		]);
+	}
+
+	/**
 	 * データ更新時にビューを更新する機能
 	 * 要件: データ更新時にサマリーとグラフを再描画する
 	 */
 	private refreshViews(): void {
-		// アクティブなCount Novelsビューを探して更新
 		this.plugin.app.workspace.iterateAllLeaves((leaf) => {
 			if (leaf.view.getViewType() === VIEW_TYPE_COUNT_NOVEL) {
-				const view = leaf.view as any; // CountNovelHomeの型を使用
-
-				// サマリーとグラフの両方を更新
-				if (
-					view.refreshStats &&
-					typeof view.refreshStats === "function"
-				) {
-					view.refreshStats();
-				} else {
-					// フォールバック: 個別メソッドを呼び出し
-					if (
-						view.refreshSummary &&
-						typeof view.refreshSummary === "function"
-					) {
-						view.refreshSummary();
-					}
-					if (
-						view.refreshChart &&
-						typeof view.refreshChart === "function"
-					) {
-						view.refreshChart();
-					}
-				}
+				this.refreshView(leaf.view);
 			}
 		});
+	}
+
+	/**
+	 * 個別のビューを更新
+	 */
+	private refreshView(view: any): void {
+		if (typeof view.refreshStats === "function") {
+			view.refreshStats();
+		} else {
+			// フォールバック: 個別メソッドを呼び出し
+			this.callIfExists(view, "refreshSummary");
+			this.callIfExists(view, "refreshChart");
+		}
+	}
+
+	/**
+	 * メソッドが存在する場合のみ呼び出す
+	 */
+	private callIfExists(obj: any, methodName: string): void {
+		if (typeof obj[methodName] === "function") {
+			obj[methodName]();
+		}
 	}
 }
