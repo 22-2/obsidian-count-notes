@@ -1,5 +1,5 @@
 // E2E Test for Data Collection Functionality
-import "./setup/logger-setup";
+import "e2e/setup/logger-setup";
 
 import { splitMd } from "src/utils/markdwon";
 import { expect, test } from "../base";

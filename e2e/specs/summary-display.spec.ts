@@ -1,5 +1,5 @@
 // E2E Test for Summary Display Functionality
-import "./setup/logger-setup";
+import "e2e/setup/logger-setup";
 
 import { expect, test } from "../base";
 import { DIST_DIR, PLUGIN_ID, SANDBOX_VAULT_NAME } from "../constants";

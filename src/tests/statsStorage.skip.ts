@@ -1,4 +1,3 @@
-import "fake-indexeddb/auto";
 import { db } from "../services/db";
 import { StatsStorage } from "../services/statsStorage";
 
