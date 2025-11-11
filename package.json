@@ -12,6 +12,7 @@
 		"repomix": "pnpm dlx repomix && code ./repomix-output.md",
 		"test": "vitest",
 		"test:watch": "vitest --watch",
+		"test:e2e": "playwright test",
 		"test:coverage": "vitest --coverage"
 	},
 	"keywords": [],
@@ -46,6 +47,7 @@
 		"dexie": "^4.2.1",
 		"idb-keyval": "^6.2.2",
 		"loglevel": "^1.9.2",
+		"obsidian-e2e-toolkit": "github:22-2/obsidian-e2e-toolkit#0.0.1",
 		"zod": "^4.1.11"
 	}
 }
