@@ -25,7 +25,8 @@
 		],
 		"types": [
 			"node",
-			"obsidian-typings"
+			"obsidian-typings",
+			"vitest/globals"
 		]
 	},
 	"include": [
