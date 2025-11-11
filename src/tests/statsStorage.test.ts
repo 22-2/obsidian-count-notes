@@ -1,5 +1,5 @@
 import { db } from "../services/db";
-import { StatsStorage } from "../services/statsStorage";
+import { StatsStorage } from "../services/StatsStorage";
 
 describe("StatsStorage", () => {
 	let statsStorage: StatsStorage;
