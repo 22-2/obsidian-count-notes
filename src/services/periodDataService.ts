@@ -31,8 +31,9 @@ export class PeriodDataService {
 	constructor(private statsStorage: StatsStorage) {}
 
 	async getPeriodStats(periodType: PeriodType): Promise<PeriodStats> {
-		const dailyStats = await this.statsStorage.getDailyStats();
-		const hourlyStats = await this.statsStorage.getHourlyStats();
+		const { startDate, endDate } = this.getDateRange(periodType);
+		const dailyStats = await this.statsStorage.getDailyStatsByDateRange(startDate, endDate);
+		const hourlyStats = await this.statsStorage.getHourlyStatsByDateRange(startDate, endDate);
 
 		const statsCalculators = {
 			day: () => this.getDayStats(dailyStats, hourlyStats),
@@ -50,8 +51,9 @@ export class PeriodDataService {
 	}
 
 	async getChartData(periodType: PeriodType): Promise<ChartDataPoint[]> {
-		const dailyStats = await this.statsStorage.getDailyStats();
-		const hourlyStats = await this.statsStorage.getHourlyStats();
+		const { startDate, endDate } = this.getDateRange(periodType);
+		const dailyStats = await this.statsStorage.getDailyStatsByDateRange(startDate, endDate);
+		const hourlyStats = await this.statsStorage.getHourlyStatsByDateRange(startDate, endDate);
 
 		const chartDataGenerators = {
 			day: () => this.getDayChartData(hourlyStats),
@@ -66,6 +68,44 @@ export class PeriodDataService {
 		}
 
 		return generator();
+	}
+
+	private getDateRange(periodType: PeriodType): { startDate: string; endDate: string } {
+		const today = new Date();
+		switch (periodType) {
+			case "day": {
+				const todayStr = this.formatDateString(today);
+				return { startDate: todayStr, endDate: todayStr };
+			}
+			case "week": {
+				const startOfWeek = this.getStartOfWeek(today);
+				const endOfWeek = new Date(startOfWeek);
+				endOfWeek.setDate(startOfWeek.getDate() + 6);
+				return {
+					startDate: this.formatDateString(startOfWeek),
+					endDate: this.formatDateString(endOfWeek),
+				};
+			}
+			case "month": {
+				const year = today.getFullYear();
+				const month = today.getMonth();
+				const startDate = new Date(year, month, 1);
+				const endDate = new Date(year, month + 1, 0);
+				return {
+					startDate: this.formatDateString(startDate),
+					endDate: this.formatDateString(endDate),
+				};
+			}
+			case "year": {
+				const year = today.getFullYear();
+				const startDate = new Date(year, 0, 1);
+				const endDate = new Date(year, 11, 31);
+				return {
+					startDate: this.formatDateString(startDate),
+					endDate: this.formatDateString(endDate),
+				};
+			}
+		}
 	}
 
 	private getDayStats(
