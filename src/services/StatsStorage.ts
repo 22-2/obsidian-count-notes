@@ -1,56 +1,130 @@
-import { createStore, get, set } from "idb-keyval";
+import { db } from "./db";
 import type { DailyStats, HourlyStats } from "../schemas";
 
-// Use a dedicated DB/store to avoid colliding with other plugins/apps.
-const IDB_DB_NAME = "obsidian-count-novels-db";
-const IDB_STORE_NAME = "stats";
-const store = createStore(IDB_DB_NAME, IDB_STORE_NAME);
-
-const DAILY_STATS_KEY = "dailyStats";
-const HOURLY_STATS_KEY = "hourlyStats";
 const LAST_TOTAL_CHARACTER_COUNT_KEY = "lastTotalCharacterCount";
 
 export class StatsStorage {
+	/**
+	 * Gets all daily stats.
+	 * For performance reasons, prefer `getDailyStatsByDateRange` when possible.
+	 * @returns A promise that resolves to the daily stats.
+	 */
 	async getDailyStats(): Promise<DailyStats> {
-		return (await get(DAILY_STATS_KEY, store)) || {};
+		const statsArray = await db.dailyStats.toArray();
+		const stats: DailyStats = {};
+		for (const item of statsArray) {
+			stats[item.date] = item.count;
+		}
+		return stats;
 	}
 
-	async saveDailyStats(stats: DailyStats): Promise<void> {
-		await set(DAILY_STATS_KEY, stats, store);
+	/**
+	 * Gets daily stats for a specific date range.
+	 * @param startDate - The start date in YYYY-MM-DD format.
+	 * @param endDate - The end date in YYYY-MM-DD format.
+	 * @returns A promise that resolves to the daily stats for the given range.
+	 */
+	async getDailyStatsByDateRange(
+		startDate: string, // YYYY-MM-DD
+		endDate: string // YYYY-MM-DD
+	): Promise<DailyStats> {
+		const statsArray = await db.dailyStats
+			.where("date")
+			.between(startDate, endDate, true, true)
+			.toArray();
+		const stats: DailyStats = {};
+		for (const item of statsArray) {
+			stats[item.date] = item.count;
+		}
+		return stats;
 	}
 
+	/**
+	 * Gets all hourly stats.
+	 * For performance reasons, prefer `getHourlyStatsByDateRange` when possible.
+	 * @returns A promise that resolves to the hourly stats.
+	 */
 	async getHourlyStats(): Promise<HourlyStats> {
-		return (await get(HOURLY_STATS_KEY, store)) || {};
+		const statsArray = await db.hourlyStats.toArray();
+		const stats: HourlyStats = {};
+		for (const item of statsArray) {
+			stats[item.datetime] = item.count;
+		}
+		return stats;
 	}
 
-	async saveHourlyStats(stats: HourlyStats): Promise<void> {
-		await set(HOURLY_STATS_KEY, stats, store);
+	/**
+	 * Gets hourly stats for a specific date range.
+	 * @param startDate - The start date in YYYY-MM-DD format.
+	 * @param endDate - The end date in YYYY-MM-DD format.
+	 * @returns A promise that resolves to the hourly stats for the given range.
+	 */
+	async getHourlyStatsByDateRange(
+		startDate: string, // YYYY-MM-DD
+		endDate: string // YYYY-MM-DD
+	): Promise<HourlyStats> {
+		const startDatetime = `${startDate}-00`;
+		const endDatetime = `${endDate}-23`;
+		const statsArray = await db.hourlyStats
+			.where("datetime")
+			.between(startDatetime, endDatetime, true, true)
+			.toArray();
+		const stats: HourlyStats = {};
+		for (const item of statsArray) {
+			stats[item.datetime] = item.count;
+		}
+		return stats;
 	}
 
+	/**
+	 * Gets the last total character count.
+	 * @returns A promise that resolves to the last total character count.
+	 */
 	async getLastTotalCharacterCount(): Promise<number> {
-		return (await get(LAST_TOTAL_CHARACTER_COUNT_KEY, store)) || 0;
+		const result = await db.misc.get(LAST_TOTAL_CHARACTER_COUNT_KEY);
+		return result ? (result.value as number) : 0;
 	}
 
+	/**
+	 * Saves the last total character count.
+	 * @param count - The last total character count.
+	 */
 	async saveLastTotalCharacterCount(count: number): Promise<void> {
-		await set(LAST_TOTAL_CHARACTER_COUNT_KEY, count, store);
+		await db.misc.put({
+			key: LAST_TOTAL_CHARACTER_COUNT_KEY,
+			value: count,
+		});
 	}
 
+	/**
+	 * Updates the daily stats for a given date.
+	 * @param date - The date in YYYY-MM-DD format.
+	 * @param characterDiff - The character difference to add.
+	 */
 	async updateDailyStats(date: string, characterDiff: number): Promise<void> {
-		const stats = await this.getDailyStats();
-		const existingValue = stats[date] || 0;
-		stats[date] = existingValue + characterDiff;
-		await this.saveDailyStats(stats);
+		await db.transaction("rw", db.dailyStats, async () => {
+			const existing = await db.dailyStats.get(date);
+			const newCount = (existing?.count || 0) + characterDiff;
+			await db.dailyStats.put({ date, count: newCount });
+		});
 	}
 
+	/**
+	 * Updates the hourly stats for a given date.
+	 * @param date - The date in YYYY-MM-DD format.
+	 * @param characterDiff - The character difference to add.
+	 */
 	async updateHourlyStats(
-		date: string,
+		date: string, // YYYY-MM-DD
 		characterDiff: number
 	): Promise<void> {
-		const stats = await this.getHourlyStats();
 		const currentHour = new Date().getHours();
 		const timeSlotKey = `${date}-${currentHour}`;
-		const existingValue = stats[timeSlotKey] || 0;
-		stats[timeSlotKey] = existingValue + characterDiff;
-		await this.saveHourlyStats(stats);
+
+		await db.transaction("rw", db.hourlyStats, async () => {
+			const existing = await db.hourlyStats.get(timeSlotKey);
+			const newCount = (existing?.count || 0) + characterDiff;
+			await db.hourlyStats.put({ datetime: timeSlotKey, count: newCount });
+		});
 	}
 }

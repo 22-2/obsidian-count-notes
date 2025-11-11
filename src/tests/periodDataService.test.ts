@@ -18,6 +18,14 @@ class MockStatsStorage implements Partial<StatsStorage> {
 	async getHourlyStats() {
 		return this.mockHourlyStats;
 	}
+
+	async getDailyStatsByDateRange(startDate: string, endDate: string) {
+		return this.mockDailyStats;
+	}
+
+	async getHourlyStatsByDateRange(startDate: string, endDate: string) {
+		return this.mockHourlyStats;
+	}
 }
 
 // テスト用の日付を固定 (例: 2025-10-02)
@@ -28,11 +36,11 @@ describe("PeriodDataService", () => {
 
 	beforeAll(() => {
 		// Date.now() をモックして、テストが常に同じ日付で実行されるようにする
-		jest.useFakeTimers().setSystemTime(MOCK_DATE);
+		vi.useFakeTimers().setSystemTime(MOCK_DATE);
 	});
 
 	afterAll(() => {
-		jest.useRealTimers();
+		vi.useRealTimers();
 	});
 
 	beforeEach(() => {
@@ -67,7 +75,7 @@ describe("PeriodDataService", () => {
 	describe("getChartData", () => {
 		test("should return 6 time slots for day view", async () => {
 			const chartData = await service.getChartData("day");
-			expect(chartData).toHaveLength(6);
+			expect(chartData).to.have.lengthOf(6);
 			expect(chartData[2].value).toBe(1500); // 8h-12h slot
 		});
 	});

@@ -1,0 +1,19 @@
+import path from "path";
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+	test: {
+		globals: true,
+		environment: "node",
+		setupFiles: ["fake-indexeddb/auto"],
+		deps: {
+			moduleDirectories: ["dexie"],
+		},
+		exclude: ["e2e/**", "node_modules/**"],
+	},
+	resolve: {
+		alias: {
+			src: path.resolve(__dirname, "./src"),
+		},
+	},
+});
