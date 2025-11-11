@@ -55,45 +55,44 @@ describe("StatsStorage", () => {
 
 	describe("Hourly Stats", () => {
 		it("should save and retrieve hourly stats", async () => {
-			await statsStorage.updateHourlyStats("2024-01-01", 10);
-			await statsStorage.updateHourlyStats("2024-01-02", 20);
+			const hour = '03'; // Fixed hour for consistent testing
+			await statsStorage.updateHourlyStats("2024-01-01", 10, hour);
+			await statsStorage.updateHourlyStats("2024-01-02", 20, hour);
 
 			const hourlyStats = await statsStorage.getHourlyStats();
-			const date = new Date();
-			const hour = date.getHours();
 			expect(hourlyStats).toEqual({
-				[`2024-01-01-${hour}`]: 10,
-				[`2024-01-02-${hour}`]: 20,
+				[`2024-01-01-${String(hour).padStart(2, '0')}`]: 10,
+				[`2024-01-02-${String(hour).padStart(2, '0')}`]: 20,
 			});
 		});
 
 		it("should update existing hourly stats", async () => {
-			await statsStorage.updateHourlyStats("2024-01-01", 10);
-			await statsStorage.updateHourlyStats("2024-01-01", 5);
+			const hour = 3; // Fixed hour for consistent testing
+			await statsStorage.updateHourlyStats("2024-01-01", 10, hour);
+			await statsStorage.updateHourlyStats("2024-01-01", 5, hour);
 
 			const hourlyStats = await statsStorage.getHourlyStats();
-			const date = new Date();
-			const hour = date.getHours();
 			expect(hourlyStats).toEqual({
-				[`2024-01-01-${hour}`]: 15,
+				[`2024-01-01-${String(hour).padStart(2, '0')}`]: 15,
 			});
 		});
 
 		it("should retrieve hourly stats by date range", async () => {
-			await statsStorage.updateHourlyStats("2024-01-01", 10);
-			await statsStorage.updateHourlyStats("2024-01-02", 20);
-			await statsStorage.updateHourlyStats("2024-01-03", 30);
+			const hour = 3; // Fixed hour for consistent testing
+			await statsStorage.updateHourlyStats("2024-01-01", 10, hour);
+			await statsStorage.updateHourlyStats("2024-01-02", 20, hour);
+			await statsStorage.updateHourlyStats("2024-01-03", 30, hour);
 
 			const stats = await statsStorage.getHourlyStatsByDateRange(
 				"2024-01-01",
-				"2024-01-02"
+				"2024-01-02",
+				hour,
+				hour
 			);
 
-			const date = new Date();
-			const hour = date.getHours();
 			expect(stats).toEqual({
-				[`2024-01-01-${hour}`]: 10,
-				[`2024-01-02-${hour}`]: 20,
+				[`2024-01-01-${String(hour).padStart(2, '0')}`]: 10,
+				[`2024-01-02-${String(hour).padStart(2, '0')}`]: 20,
 			});
 		});
 	});

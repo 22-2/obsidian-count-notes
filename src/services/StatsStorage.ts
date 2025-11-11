@@ -61,10 +61,15 @@ export class StatsStorage {
 	 */
 	async getHourlyStatsByDateRange(
 		startDate: string, // YYYY-MM-DD
-		endDate: string // YYYY-MM-DD
+		endDate: string, // YYYY-MM-DD
+		startHour?: number, // Optional start hour for testing
+		endHour?: number // Optional end hour for testing
 	): Promise<HourlyStats> {
-		const startDatetime = `${startDate}-00`;
-		const endDatetime = `${endDate}-23`;
+		const formattedStartHour = startHour !== undefined ? String(startHour).padStart(2, '0') : '00';
+		const formattedEndHour = endHour !== undefined ? String(endHour).padStart(2, '0') : '23';
+
+		const startDatetime = `${startDate}-${formattedStartHour}`;
+		const endDatetime = `${endDate}-${formattedEndHour}`;
 		const statsArray = await db.hourlyStats
 			.where("datetime")
 			.between(startDatetime, endDatetime, true, true)
@@ -116,10 +121,11 @@ export class StatsStorage {
 	 */
 	async updateHourlyStats(
 		date: string, // YYYY-MM-DD
-		characterDiff: number
+		characterDiff: number,
+		hour?: number // Optional hour for testing
 	): Promise<void> {
-		const currentHour = new Date().getHours();
-		const timeSlotKey = `${date}-${currentHour}`;
+		const hourToUse = hour !== undefined ? hour : new Date().getHours();
+		const timeSlotKey = `${date}-${String(hourToUse).padStart(2, '0')}`;
 
 		await db.transaction("rw", db.hourlyStats, async () => {
 			const existing = await db.hourlyStats.get(timeSlotKey);
