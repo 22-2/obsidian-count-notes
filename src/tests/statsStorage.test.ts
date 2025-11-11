@@ -1,5 +1,5 @@
 import { db } from "../services/db";
-import { StatsStorage } from "../services/StatsStorage";
+import { StatsStorage } from "../services/statsStorage";
 
 describe("StatsStorage", () => {
 	let statsStorage: StatsStorage;
@@ -55,14 +55,14 @@ describe("StatsStorage", () => {
 
 	describe("Hourly Stats", () => {
 		it("should save and retrieve hourly stats", async () => {
-			const hour = '03'; // Fixed hour for consistent testing
+			const hour = 3; // Fixed hour for consistent testing
 			await statsStorage.updateHourlyStats("2024-01-01", 10, hour);
 			await statsStorage.updateHourlyStats("2024-01-02", 20, hour);
 
 			const hourlyStats = await statsStorage.getHourlyStats();
 			expect(hourlyStats).toEqual({
-				[`2024-01-01-${String(hour).padStart(2, '0')}`]: 10,
-				[`2024-01-02-${String(hour).padStart(2, '0')}`]: 20,
+				[`2024-01-01-${String(hour).padStart(2, "0")}`]: 10,
+				[`2024-01-02-${String(hour).padStart(2, "0")}`]: 20,
 			});
 		});
 
@@ -73,7 +73,7 @@ describe("StatsStorage", () => {
 
 			const hourlyStats = await statsStorage.getHourlyStats();
 			expect(hourlyStats).toEqual({
-				[`2024-01-01-${String(hour).padStart(2, '0')}`]: 15,
+				[`2024-01-01-${String(hour).padStart(2, "0")}`]: 15,
 			});
 		});
 
@@ -91,8 +91,8 @@ describe("StatsStorage", () => {
 			);
 
 			expect(stats).toEqual({
-				[`2024-01-01-${String(hour).padStart(2, '0')}`]: 10,
-				[`2024-01-02-${String(hour).padStart(2, '0')}`]: 20,
+				[`2024-01-01-${String(hour).padStart(2, "0")}`]: 10,
+				[`2024-01-02-${String(hour).padStart(2, "0")}`]: 20,
 			});
 		});
 	});
