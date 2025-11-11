@@ -87,6 +87,7 @@ export const DailyStatsSchema = z.record(DateStringSchema, z.number().int());
 export const PluginDataSchema = z.object({
 	settings: CountNovelsSettingsSchema,
 	lastViewState: ViewStateSchema.optional(),
+	lastCollectedAt: z.string().optional(),
 });
 
 // 型定義（zodスキーマから自動生成）

@@ -14,12 +14,14 @@ export default class CountNovelsPlugin extends Plugin {
 	statsStorage!: StatsStorage;
 	dataCollectionService!: DataCollectionService;
 	private intervalId?: number;
+	statusBarItemEl!: HTMLElement;
 
 	async onload() {
 		try {
 			await this.initializeServices();
 			await this.setupUI();
 			await this.startDataCollection();
+			this.updateStatusBar();
 		} catch (error) {
 			console.error("Count Novels: Failed to initialize plugin:", error);
 		}
@@ -44,6 +46,7 @@ export default class CountNovelsPlugin extends Plugin {
 			return view;
 		});
 		this.registerCommands();
+		this.statusBarItemEl = this.addStatusBarItem();
 	}
 
 	private registerCommands(): void {
@@ -107,6 +110,29 @@ export default class CountNovelsPlugin extends Plugin {
 		this.stopPeriodicDataCollection();
 	}
 
+	updateStatusBar(): void {
+		const lastCollectedAt = this.dataStorage.getData()?.lastCollectedAt;
+		if (!lastCollectedAt) {
+			this.statusBarItemEl.setText("Count Novels: No data collected yet");
+			return;
+		}
+
+		const lastCollectedDate = new Date(lastCollectedAt);
+		const now = new Date();
+		const diffInMinutes = Math.floor(
+			(now.getTime() - lastCollectedDate.getTime()) / (1000 * 60)
+		);
+
+		if (diffInMinutes < 1) {
+			this.statusBarItemEl.setText("Count Novels: Measured just now");
+			return;
+		}
+
+		this.statusBarItemEl.setText(
+			`Count Novels: Measured ${diffInMinutes} minutes ago`
+		);
+	}
+
 	private configureLogging(): void {
 		this.togglLoggersBy(this.settings.logLevel);
 	}
@@ -149,6 +175,9 @@ export default class CountNovelsPlugin extends Plugin {
 	async collectData(): Promise<void> {
 		try {
 			await this.dataCollectionService.collectData();
+			this.dataStorage.updateLastCollectedAt(new Date().toISOString());
+			await this.dataStorage.saveData();
+			this.updateStatusBar();
 		} catch (error) {
 			console.error("Count Novels: Data collection failed:", error);
 			throw error;

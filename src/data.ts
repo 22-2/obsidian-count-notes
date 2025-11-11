@@ -120,6 +120,11 @@ export class DataStorage {
 		this.data!.lastViewState = { period };
 	}
 
+	updateLastCollectedAt(timestamp: string): void {
+		this.ensureDataInitialized();
+		this.data!.lastCollectedAt = timestamp;
+	}
+
 	/**
 	 * 期間タイプをバリデーションする
 	 */
