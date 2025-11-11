@@ -1,51 +1,62 @@
-import type { DataStorage } from "../data";
 import { PeriodDataService } from "../services/periodDataService";
+import type { StatsStorage } from "../services/statsStorage";
 
-// モックデータストレージ
-class MockDataStorage implements Partial<DataStorage> {
-	private mockData: any;
+// This is a simplified mock for StatsStorage, similar to the one in periodDataService.test.ts
+class MockStatsStorage implements Partial<StatsStorage> {
+	private mockDailyStats: any;
+	private mockHourlyStats: any;
 
-	constructor(mockData: any) {
-		this.mockData = mockData;
+	constructor(dailyStats: any, hourlyStats: any) {
+		this.mockDailyStats = dailyStats;
+		this.mockHourlyStats = hourlyStats;
 	}
 
-	getData() {
-		return this.mockData;
+	async getDailyStats() {
+		return this.mockDailyStats;
+	}
+
+	async getHourlyStats() {
+		return this.mockHourlyStats;
+	}
+
+	async getDailyStatsByDateRange(startDate: string, endDate: string) {
+		return this.mockDailyStats;
+	}
+
+	async getHourlyStatsByDateRange(startDate: string, endDate: string) {
+		return this.mockHourlyStats;
 	}
 }
 
+
 describe("Hourly Stats - Time-based Data Collection", () => {
 	let service: PeriodDataService;
-	let mockStorage: MockDataStorage;
 
 	beforeEach(() => {
-		// テスト用のモックデータを作成（2025-10-02を基準日とする）
-		const mockData = {
-			dailyStats: {
-				"2025-10-02": 2400, // 今日の合計
-			},
-			hourlyStats: {
-				// 今日の時間別データ（1時間単位）
-				"2025-10-02-9": 300, // 9時台
-				"2025-10-02-10": 400, // 10時台
-				"2025-10-02-11": 300, // 11時台（8-12hスロット合計: 1000）
-				"2025-10-02-14": 500, // 14時台
-				"2025-10-02-15": 200, // 15時台（12-16hスロット合計: 700）
-				"2025-10-02-17": 350, // 17時台
-				"2025-10-02-18": 250, // 18時台（16-20hスロット合計: 600）
-				"2025-10-02-21": 100, // 21時台（20-24hスロット合計: 100）
-			},
+		const dailyStats = {
+			"2025-10-02": 2400, // 今日の合計
+		};
+		const hourlyStats = {
+			// 今日の時間別データ（1時間単位）
+			"2025-10-02-9": 300, // 9時台
+			"2025-10-02-10": 400, // 10時台
+			"2025-10-02-11": 300, // 11時台（8-12hスロット合計: 1000）
+			"2025-10-02-14": 500, // 14時台
+			"2025-10-02-15": 200, // 15時台（12-16hスロット合計: 700）
+			"2025-10-02-17": 350, // 17時台
+			"2025-10-02-18": 250, // 18時台（16-20hスロット合計: 600）
+			"2025-10-02-21": 100, // 21時台（20-24hスロット合計: 100）
 		};
 
-		mockStorage = new MockDataStorage(mockData);
+		const mockStorage = new MockStatsStorage(dailyStats, hourlyStats);
 		service = new PeriodDataService(mockStorage as any);
 	});
 
 	describe("getDayChartData with hourly stats", () => {
-		test("should aggregate hourly data into 4-hour slots", () => {
-			const chartData = service.getChartData("day");
+		test("should aggregate hourly data into 4-hour slots", async () => {
+			const chartData = await service.getChartData("day");
 
-			expect(chartData).toHaveLength(6);
+			expect(chartData).to.have.lengthOf(6);
 
 			// 0-4h: データなし
 			expect(chartData[0].label).toBe("0h");
@@ -72,18 +83,16 @@ describe("Hourly Stats - Time-based Data Collection", () => {
 			expect(chartData[5].value).toBe(100);
 		});
 
-		test("should handle partial hour data within 4-hour slots", () => {
-			const partialData = {
-				dailyStats: { "2025-10-02": 500 },
-				hourlyStats: {
-					"2025-10-02-8": 200, // 8時台のみ
-					"2025-10-02-13": 300, // 13時台のみ
-				},
+		test("should handle partial hour data within 4-hour slots", async () => {
+			const dailyStats = { "2025-10-02": 500 };
+			const hourlyStats = {
+				"2025-10-02-8": 200, // 8時台のみ
+				"2025-10-02-13": 300, // 13時台のみ
 			};
 
-			const partialStorage = new MockDataStorage(partialData);
+			const partialStorage = new MockStatsStorage(dailyStats, hourlyStats);
 			const partialService = new PeriodDataService(partialStorage as any);
-			const chartData = partialService.getChartData("day");
+			const chartData = await partialService.getChartData("day");
 
 			// 8-12hスロット: 8時台のみ
 			expect(chartData[2].value).toBe(200);
