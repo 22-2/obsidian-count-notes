@@ -1,6 +1,12 @@
 import path from "path";
 import { fileURLToPath } from "url";
-import manifest from "../manifest.json" with { type: "json" };
+import { readFileSync } from "fs";
+
+// Replace invalid JSON import with safe runtime read
+const manifest = JSON.parse(
+	// resolve manifest relative to this file's URL
+	readFileSync(new URL("../manifest.json", import.meta.url), "utf-8")
+);
 
 // --- Project Structure ---
 const __filename = fileURLToPath(import.meta.url);
