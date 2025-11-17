@@ -3,13 +3,10 @@ import type { StatsStorage } from "../services/statsStorage";
 
 // モックStatsStorage
 class MockStatsStorage implements Partial<StatsStorage> {
-	private mockDailyStats: any;
-	private mockHourlyStats: any;
-
-	constructor(dailyStats: any, hourlyStats: any) {
-		this.mockDailyStats = dailyStats;
-		this.mockHourlyStats = hourlyStats;
-	}
+	constructor(
+		private mockDailyStats: Record<string, number> = {},
+		private mockHourlyStats: Record<string, number> = {}
+	) {}
 
 	async getDailyStats() {
 		return this.mockDailyStats;
@@ -74,6 +71,40 @@ describe("PeriodDataService", () => {
 			expect(stats.streak).toBe(3);
 			expect(stats.periodLabel).toBe("今日");
 		});
+
+		test("should aggregate totals and averages for current week", async () => {
+			const weeklyStats = new MockStatsStorage({
+				"2025-09-28": 0,
+				"2025-09-29": 200,
+				"2025-09-30": -50,
+				"2025-10-01": 400,
+				"2025-10-02": 100,
+				"2025-10-03": 0,
+				"2025-10-04": 50,
+			});
+			const weeklyService = new PeriodDataService(weeklyStats as any);
+
+			const stats = await weeklyService.getPeriodStats("week");
+
+			expect(stats).toMatchObject({
+				total: 750,
+				average: 188,
+				streak: 2,
+				periodLabel: "今週",
+			});
+		});
+
+		test("should continue streak from previous day when today has no count", async () => {
+			const streakStats = new MockStatsStorage({
+				"2025-10-01": 120,
+				"2025-09-30": 80,
+				"2025-09-29": 0,
+			});
+			const streakService = new PeriodDataService(streakStats as any);
+
+			const stats = await streakService.getPeriodStats("week");
+			expect(stats.streak).toBe(2);
+		});
 	});
 
 	describe("getChartData", () => {
@@ -81,6 +112,44 @@ describe("PeriodDataService", () => {
 			const chartData = await service.getChartData("day");
 			expect(chartData).to.have.lengthOf(6);
 			expect(chartData[2].value).toBe(1500); // 8h-12h slot
+		});
+
+		test("should group month data into 5-day buckets", async () => {
+			const dailyStats = new MockStatsStorage({
+				"2025-10-01": 100,
+				"2025-10-02": 200,
+				"2025-10-03": -50,
+				"2025-10-05": 300,
+				"2025-10-06": 100,
+				"2025-10-10": 400,
+				"2025-10-15": 500,
+			});
+			const monthlyService = new PeriodDataService(dailyStats as any);
+
+			const chartData = await monthlyService.getChartData("month");
+			expect(chartData[0]).toMatchObject({ label: "1-5日", value: 600 });
+			expect(chartData[1]).toMatchObject({ label: "6-10日", value: 500 });
+			expect(chartData[2]).toMatchObject({ label: "11-15日", value: 500 });
+		});
+
+		test("should aggregate quarterly totals for year chart", async () => {
+			const yearlyStats = new MockStatsStorage({
+				"2025-01-01": 100,
+				"2025-02-10": 50,
+				"2025-04-05": -100,
+				"2025-07-15": 200,
+				"2025-11-01": 300,
+			});
+			const yearlyService = new PeriodDataService(yearlyStats as any);
+
+			const chartData = await yearlyService.getChartData("year");
+
+			expect(chartData).toEqual([
+				{ label: "Q1", value: 150, date: "2025-01-01" },
+				{ label: "Q2", value: 0, date: "2025-04-01" },
+				{ label: "Q3", value: 200, date: "2025-07-01" },
+				{ label: "Q4", value: 300, date: "2025-10-01" },
+			]);
 		});
 	});
 

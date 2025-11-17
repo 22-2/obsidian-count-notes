@@ -71,3 +71,4 @@ repomix-output.md
 # NOTE: Uncomment the line below if generated images should be ignored.
 # If you have asset images in the repo, keep this commented.
 # *.png
+coverage/

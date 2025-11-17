@@ -13,7 +13,8 @@
 		"test": "vitest",
 		"test:watch": "vitest --watch",
 		"test:e2e": "playwright test",
-		"test:coverage": "vitest --ui --coverage"
+		"test:coverage": "vitest --coverage",
+		"test:coverage:ui": "vitest --ui --coverage"
 	},
 	"keywords": [],
 	"author": "",
