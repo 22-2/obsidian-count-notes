@@ -162,13 +162,9 @@ export class DataCollectionService {
 			// 差分が0でも currentTotal は保存する（初回データ収集の場合など）
 			await this.statsStorage.saveLastTotalCharacterCount(currentTotal);
 
-			// 差分が0または負の場合は統計を保存しない
-			if (difference <= 0) {
-				if (difference < 0) {
-					console.log(`Count Novels: Character count decreased by ${Math.abs(difference)}. Not recording negative change.`);
-				} else {
-					console.log("Count Novels: No change in character count.");
-				}
+			// 差分が0の場合のみ統計を保存しない
+			if (difference === 0) {
+				console.log("Count Novels: No change in character count.");
 				return;
 			}
 
@@ -176,9 +172,15 @@ export class DataCollectionService {
 			await this.saveDailyAndHourlyStats(today, difference);
 			this.refreshViews();
 
-			console.log(
-				`Count Novels: Data collection completed. Recorded ${difference} characters for ${today}`
-			);
+			if (difference > 0) {
+				console.log(
+					`Count Novels: Data collection completed. Recorded ${difference} characters for ${today}`
+				);
+			} else {
+				console.log(
+					`Count Novels: Character count decreased by ${Math.abs(difference)}. Adjusted stats for ${today}`
+				);
+			}
 		} catch (error) {
 			console.error("Count Novels: Error during data collection:", error);
 		}
