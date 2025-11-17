@@ -386,14 +386,14 @@ It should generate some character count data for the chart.`,
 });
 
 // Custom settings for these tests
-test.use({
-	vaultOptions: {
-		sandbox: true,
-		plugins: [
-			{
-				path: DIST_DIR,
-				pluginId: PLUGIN_ID,
-			},
-		],
-	},
-});
+// test.use({
+// 	vaultOptions: {
+// 		sandbox: true,
+// 		plugins: [
+// 			{
+// 				path: DIST_DIR,
+// 				pluginId: PLUGIN_ID,
+// 			},
+// 		],
+// 	},
+// });

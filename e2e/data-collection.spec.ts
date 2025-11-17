@@ -1,7 +1,7 @@
 import type { ObsidianAPI } from "obsidian-e2e-toolkit";
 import { expect, test } from "obsidian-e2e-toolkit";
 import { splitMd } from "src/utils/markdwon";
-import { DIST_DIR, PLUGIN_ID } from "./constants.ts";
+import { PLUGIN_ID } from "./constants.ts";
 
 // Constants
 const METADATA_CACHE_WAIT_MS = 500;
@@ -47,17 +47,17 @@ class TestHelpers {
 	}
 
 	async collectData(): Promise<DataCollectionResult | null> {
-		return this.obsidian.page.evaluate(async (pluginId) => {
-			const plugin = app.plugins.getPlugin(pluginId) as any;
-			if (!plugin) return null;
-
+		const plugin = await this.obsidian.plugin(PLUGIN_ID);
+		return plugin.evaluate(async (plugin) => {
 			await plugin.collectData();
-			const pluginData = plugin.dataStorage.getData();
+
+			// IndexedDBから直接読み取る
+			const lastTotalCharacterCount = await plugin.statsStorage.getLastTotalCharacterCount();
+			const dailyStats = await plugin.statsStorage.getDailyStats();
 
 			return {
-				lastTotalCharacterCount:
-					pluginData?.lastTotalCharacterCount || 0,
-				dailyStats: pluginData?.dailyStats || {},
+				lastTotalCharacterCount,
+				dailyStats,
 				trackingTag: plugin.settings.trackingTag,
 			};
 		}, PLUGIN_ID);
@@ -84,7 +84,8 @@ class TestHelpers {
 		return this.obsidian.page.evaluate(async (pluginId) => {
 			const plugin = app.plugins.getPlugin(pluginId) as any;
 			await plugin.collectData();
-			return plugin.dataStorage.getData()?.lastTotalCharacterCount || 0;
+			// IndexedDBから直接読み取る
+			return await plugin.statsStorage.getLastTotalCharacterCount();
 		}, PLUGIN_ID);
 	}
 
@@ -164,8 +165,9 @@ test.describe("Data Collection Functionality", () => {
 	}) => {
 		const helpers = new TestHelpers(obsidian);
 
+		// await obsidian.page.pause();
 		// Verify plugin is loaded
-		expect(await obsidian.plugin(PLUGIN_ID)).toBeTruthy();
+		expect(await obsidian.isPluginEnabled(PLUGIN_ID)).toBeTruthy();
 
 		// Create test files
 		const testFiles = [
@@ -264,17 +266,4 @@ test.describe("Data Collection Functionality", () => {
 		// Clean up
 		await helpers.deleteFiles([TEST_FILES.extendedChapter.path]);
 	});
-});
-
-// Custom settings for these tests
-test.use({
-	vaultOptions: {
-		sandbox: true,
-		plugins: [
-			{
-				path: DIST_DIR,
-				pluginId: PLUGIN_ID,
-			},
-		],
-	},
 });
