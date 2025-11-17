@@ -19,10 +19,12 @@ export default class CountNovelsPlugin extends Plugin {
 
 	async onload() {
 		try {
-			await this.initializeServices();
-			await this.setupUI();
-			await this.startDataCollection();
-			this.updateStatusBar();
+			this.app.workspace.onLayoutReady(async () => {
+				await this.initializeServices();
+				await this.setupUI();
+				await this.startDataCollection();
+				this.updateStatusBar();
+			});
 		} catch (error) {
 			log.error("Count Novels: Failed to initialize plugin:", error);
 		}
