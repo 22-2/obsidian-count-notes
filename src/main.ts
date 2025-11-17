@@ -39,7 +39,7 @@ export default class CountNovelsPlugin extends Plugin {
 		this.configureLogging();
 
 		// Monitor file modifications to trigger data collection
-		this.app.vault.on("modify", async (file) => {
+		this.registerEvent(this.app.vault.on("modify", async (file) => {
 			if (!(file instanceof TFile)) {
 				return;
 			}
@@ -65,7 +65,7 @@ export default class CountNovelsPlugin extends Plugin {
 				log.error("Count Novels: Error collecting data after file modification:", err);
 				throw err;
 			});
-		});
+		}));
 	}
 
 	private async setupUI(): Promise<void> {
