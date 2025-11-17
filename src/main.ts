@@ -41,33 +41,40 @@ export default class CountNovelsPlugin extends Plugin {
 		this.configureLogging();
 
 		// Monitor file modifications to trigger data collection
-		this.registerEvent(this.app.vault.on("modify", async (file) => {
-			if (!(file instanceof TFile)) {
-				return;
-			}
-			if (file.extension !== "md") {
-				return;
-			}
+		this.registerEvent(
+			this.app.vault.on("modify", async (file) => {
+				if (!(file instanceof TFile)) {
+					return;
+				}
+				if (file.extension !== "md") {
+					return;
+				}
 
-			const cache = this.app.metadataCache.getFileCache(file)
-			if (!cache) {
-				return;
-			}
+				const cache = this.app.metadataCache.getFileCache(file);
+				if (!cache) {
+					return;
+				}
 
-			const tags = getAllTags(cache) || [];
+				const tags = (getAllTags(cache) || []).map((tag) =>
+					tag.replace(/^#/, "")
+				);
 
-			if (!tags.includes(this.settings.trackingTag)) {
-				return;
-			}
+				if (!tags.includes(this.settings.trackingTag)) {
+					return;
+				}
 
-			log.debug(
-				`Count Novels: Detected modification in file: ${file.path}`
-			);
-			await this.collectData().catch(err => {
-				log.error("Count Novels: Error collecting data after file modification:", err);
-				throw err;
-			});
-		}));
+				log.debug(
+					`Count Novels: Detected modification in file: ${file.path}`
+				);
+				await this.collectData().catch((err) => {
+					log.error(
+						"Count Novels: Error collecting data after file modification:",
+						err
+					);
+					throw err;
+				});
+			})
+		);
 	}
 
 	private async setupUI(): Promise<void> {
