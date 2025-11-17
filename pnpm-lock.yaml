@@ -28,7 +28,7 @@ importers:
         version: 1.9.2
       obsidian-e2e-toolkit:
         specifier: git+https://github.com/22-2/obsidian-e2e-toolkit.git
-        version: git+https://github.com/22-2/obsidian-e2e-toolkit.git#8341f1f92d1ad3771092d8d7b39bb56f257aff8e(@playwright/test@1.56.0)(playwright@1.56.0)
+        version: git+https://github.com/22-2/obsidian-e2e-toolkit.git#bfc3560d5d8e967f87be1511a4e6a4a0fa7688aa(@playwright/test@1.56.0)(playwright@1.56.0)
       zod:
         specifier: ^4.1.12
         version: 4.1.12
@@ -1926,8 +1926,8 @@ packages:
     resolution: {integrity: sha512-NuAESUOUMrlIXOfHKzD6bpPu3tYt3xvjNdRIQ+FeT0lNb4K8WR70CaDxhuNguS2XG+GjkyMwOzsN5ZktImfhLA==}
     engines: {node: '>= 0.4'}
 
-  obsidian-e2e-toolkit@git+https://github.com/22-2/obsidian-e2e-toolkit.git#8341f1f92d1ad3771092d8d7b39bb56f257aff8e:
-    resolution: {commit: 8341f1f92d1ad3771092d8d7b39bb56f257aff8e, repo: https://github.com/22-2/obsidian-e2e-toolkit.git, type: git}
+  obsidian-e2e-toolkit@git+https://github.com/22-2/obsidian-e2e-toolkit.git#bfc3560d5d8e967f87be1511a4e6a4a0fa7688aa:
+    resolution: {commit: bfc3560d5d8e967f87be1511a4e6a4a0fa7688aa, repo: https://github.com/22-2/obsidian-e2e-toolkit.git, type: git}
     version: 0.0.1
     engines: {node: '>=23.0.0'}
     peerDependencies:
@@ -4119,7 +4119,7 @@ snapshots:
   object-keys@1.1.1:
     optional: true
 
-  obsidian-e2e-toolkit@git+https://github.com/22-2/obsidian-e2e-toolkit.git#8341f1f92d1ad3771092d8d7b39bb56f257aff8e(@playwright/test@1.56.0)(playwright@1.56.0):
+  obsidian-e2e-toolkit@git+https://github.com/22-2/obsidian-e2e-toolkit.git#bfc3560d5d8e967f87be1511a4e6a4a0fa7688aa(@playwright/test@1.56.0)(playwright@1.56.0):
     dependencies:
       '@playwright/test': 1.56.0
       asar: 3.2.0

@@ -133,4 +133,20 @@ export class StatsStorage {
 			await db.hourlyStats.put({ datetime: timeSlotKey, count: newCount });
 		});
 	}
+
+	/**
+	 * Clears all daily stats (for testing).
+	 */
+	async clearDailyStats(): Promise<void> {
+		await db.dailyStats.clear();
+	}
+
+	/**
+	 * Saves daily stats for a specific date (for testing).
+	 * @param date - The date in YYYY-MM-DD format.
+	 * @param count - The character count.
+	 */
+	async saveDailyStats(date: string, count: number): Promise<void> {
+		await db.dailyStats.put({ date, count });
+	}
 }

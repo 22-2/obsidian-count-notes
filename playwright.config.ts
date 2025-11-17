@@ -6,14 +6,14 @@ const __dirname = path.dirname(__filename);
 const e2eDir = path.join(__dirname, "./e2e");
 
 export default defineConfig({
-	timeout: 3000 * 10,
+	timeout: 1000 * 5,
 	testDir: "./e2e",
 	outputDir: path.join(e2eDir, "./test-results"),
 	reporter: [
 		["html", { outputFolder: path.join(e2eDir, "./playwright-report") }],
 	],
 	fullyParallel: false,
-	workers: 4,
+	workers: 1,
 	use: {
 		trace: "on-first-retry",
 		video: "on",
