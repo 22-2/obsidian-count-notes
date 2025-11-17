@@ -94,10 +94,7 @@ export default class CountNovelsPlugin extends Plugin {
 			await this.collectData();
 			log.log("Count Novels: Manual data collection completed");
 		} catch (error) {
-			log.error(
-				"Count Novels: Manual data collection failed:",
-				error
-			);
+			log.error("Count Novels: Manual data collection failed:", error);
 		}
 	}
 
@@ -181,10 +178,20 @@ export default class CountNovelsPlugin extends Plugin {
 			this.dataStorage.updateLastCollectedAt(new Date().toISOString());
 			await this.dataStorage.saveData();
 			this.updateStatusBar();
+			this.refreshViews();
 		} catch (error) {
 			log.error("Count Novels: Data collection failed:", error);
 			throw error;
 		}
+	}
+
+	private refreshViews(): void {
+		this.app.workspace.iterateAllLeaves((leaf) => {
+			if (leaf.view.getViewType() === VIEW_TYPE_COUNT_NOVEL) {
+				const view = leaf.view as CountNovelView;
+				view.refreshStats();
+			}
+		});
 	}
 
 	private startPeriodicDataCollection(): void {
@@ -237,9 +244,7 @@ export default class CountNovelsPlugin extends Plugin {
 			))
 		);
 
-		log.log(
-			"Count Novels: Status bar update started (1-minute interval)"
-		);
+		log.log("Count Novels: Status bar update started (1-minute interval)");
 	}
 
 	private stopStatusBarUpdate(): void {
