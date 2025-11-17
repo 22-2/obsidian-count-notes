@@ -3,6 +3,9 @@ import { splitMd } from "src/utils/markdwon";
 import type CountNovelsPlugin from "../main";
 import { VIEW_TYPE_COUNT_NOVEL } from "../utils/constants";
 import type { StatsStorage } from "./statsStorage";
+import log from "loglevel";
+
+const logger = log.getLogger("DataCollectionService");
 
 /**
  * データ収集サービス
@@ -20,18 +23,18 @@ export class DataCollectionService {
 	 */
 	async findFilesWithTag(tag: string): Promise<TFile[]> {
 		if (!this.isValidTag(tag)) {
-			console.warn("Count Novels: Empty tag provided for file search");
+			logger.warn("Count Novels: Empty tag provided for file search");
 			return [];
 		}
 
 		const files = this.plugin.app.vault.getMarkdownFiles();
-		console.log(
+		logger.log(
 			`Count Novels: Scanning ${files.length} markdown files for tag "${tag}"`
 		);
 
 		const taggedFiles = files.filter((file) => this.hasTag(file, tag));
 
-		console.log(
+		logger.log(
 			`Count Novels: Found ${taggedFiles.length} files with tag "${tag}"`
 		);
 		return taggedFiles;
@@ -52,14 +55,14 @@ export class DataCollectionService {
 			const cache = this.plugin.app.metadataCache.getFileCache(file);
 
 			if (this.hasInlineTag(cache, tag)) {
-				console.log(
+				logger.log(
 					`Count Novels: Found tag "${tag}" in file: ${file.path}`
 				);
 				return true;
 			}
 
 			if (this.hasFrontmatterTag(cache, tag)) {
-				console.log(
+				logger.log(
 					`Count Novels: Found tag "${tag}" in frontmatter of file: ${file.path}`
 				);
 				return true;
@@ -67,7 +70,7 @@ export class DataCollectionService {
 
 			return false;
 		} catch (error) {
-			console.warn(
+			logger.warn(
 				`Count Novels: Error checking tags for file ${file.path}:`,
 				error
 			);
@@ -108,7 +111,7 @@ export class DataCollectionService {
 			const { content: markdownContent } = splitMd(content);
 			return markdownContent.length;
 		} catch (error) {
-			console.warn(
+			logger.warn(
 				`Count Novels: Error reading file ${file.path}:`,
 				error
 			);
@@ -131,12 +134,12 @@ export class DataCollectionService {
 
 			const totalCount = counts.reduce((sum, count) => sum + count, 0);
 
-			console.log(
+			logger.log(
 				`Count Novels: Total character count for tag "${tag}": ${totalCount}`
 			);
 			return totalCount;
 		} catch (error) {
-			console.error(
+			logger.error(
 				"Count Novels: Error calculating total character count:",
 				error
 			);
@@ -155,7 +158,7 @@ export class DataCollectionService {
 				await this.statsStorage.getLastTotalCharacterCount();
 			const difference = currentTotal - previousTotal;
 
-			console.log(
+			logger.log(
 				`Count Novels: Previous total: ${previousTotal}, Current total: ${currentTotal}, Difference: ${difference}`
 			);
 
@@ -164,7 +167,7 @@ export class DataCollectionService {
 
 			// 差分が0の場合のみ統計を保存しない
 			if (difference === 0) {
-				console.log("Count Novels: No change in character count.");
+				logger.log("Count Novels: No change in character count.");
 				return;
 			}
 
@@ -173,16 +176,16 @@ export class DataCollectionService {
 			this.refreshViews();
 
 			if (difference > 0) {
-				console.log(
+				logger.log(
 					`Count Novels: Data collection completed. Recorded ${difference} characters for ${today}`
 				);
 			} else {
-				console.log(
+				logger.log(
 					`Count Novels: Character count decreased by ${Math.abs(difference)}. Adjusted stats for ${today}`
 				);
 			}
 		} catch (error) {
-			console.error("Count Novels: Error during data collection:", error);
+			logger.error("Count Novels: Error during data collection:", error);
 		}
 	}
 

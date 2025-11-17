@@ -1,5 +1,5 @@
 import log from "loglevel";
-import { Plugin } from "obsidian";
+import { Plugin, TFile, getAllTags } from "obsidian";
 import { CountNovelView } from "./CountNovelView";
 import { DataStorage } from "./data";
 import { DEFAULT_SETTINGS, type CountNovelsSettings } from "./schemas";
@@ -37,6 +37,35 @@ export default class CountNovelsPlugin extends Plugin {
 		);
 		await this.loadSettings();
 		this.configureLogging();
+
+		// Monitor file modifications to trigger data collection
+		this.app.vault.on("modify", async (file) => {
+			if (!(file instanceof TFile)) {
+				return;
+			}
+			if (file.extension !== "md") {
+				return;
+			}
+
+			const cache = this.app.metadataCache.getFileCache(file)
+			if (!cache) {
+				return;
+			}
+
+			const tags = getAllTags(cache) || [];
+
+			if (!tags.includes(this.settings.trackingTag)) {
+				return;
+			}
+
+			log.debug(
+				`Count Novels: Detected modification in file: ${file.path}`
+			);
+			await this.collectData().catch(err => {
+				log.error("Count Novels: Error collecting data after file modification:", err);
+				throw err;
+			});
+		});
 	}
 
 	private async setupUI(): Promise<void> {
@@ -89,10 +118,10 @@ export default class CountNovelsPlugin extends Plugin {
 	}
 
 	private async handleManualDataCollection(): Promise<void> {
-		log.log("Count Novels: Manual data collection triggered");
+		log.debug("Count Novels: Manual data collection triggered");
 		try {
 			await this.collectData();
-			log.log("Count Novels: Manual data collection completed");
+			log.debug("Count Novels: Manual data collection completed");
 		} catch (error) {
 			log.error("Count Novels: Manual data collection failed:", error);
 		}
