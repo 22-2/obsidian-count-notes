@@ -57,7 +57,6 @@ test.describe("Data Collection Functionality", () => {
 
 		const existingFiles = await helpers.getAllMarkdownFiles();
 		await helpers.deleteFiles(existingFiles);
-		await helpers.waitForMetadataCache();
 
 		const result = await helpers.collectData();
 		expect(result).toBeTruthy();
@@ -101,3 +100,9 @@ test.describe("Data Collection Functionality", () => {
 	});
 });
 
+test.use({
+	vaultOptions: {
+		enableBrowserConsoleLogging: true,
+		logLevel: "DEBUG",
+	},
+})

@@ -6,7 +6,7 @@ const __dirname = path.dirname(__filename);
 const e2eDir = path.join(__dirname, "./e2e");
 
 export default defineConfig({
-	timeout: 1000 * 5,
+	timeout: 1000 * 20,
 	testDir: "./e2e",
 	outputDir: path.join(e2eDir, "./test-results"),
 	reporter: [

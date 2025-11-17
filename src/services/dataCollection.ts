@@ -159,13 +159,16 @@ export class DataCollectionService {
 				`Count Novels: Previous total: ${previousTotal}, Current total: ${currentTotal}, Difference: ${difference}`
 			);
 
+			// 差分が0でも currentTotal は保存する（初回データ収集の場合など）
+			await this.statsStorage.saveLastTotalCharacterCount(currentTotal);
+
 			if (difference === 0) {
 				console.log("Count Novels: No change in character count.");
 				return;
 			}
 
 			const today = this.getTodayString();
-			await this.saveStats(today, difference, currentTotal);
+			await this.saveDailyAndHourlyStats(today, difference);
 			this.refreshViews();
 
 			console.log(
@@ -188,17 +191,15 @@ export class DataCollectionService {
 	}
 
 	/**
-	 * 統計データを保存
+	 * 統計データを保存（日次・時間別のみ）
 	 */
-	private async saveStats(
+	private async saveDailyAndHourlyStats(
 		date: string,
-		difference: number,
-		total: number
+		difference: number
 	): Promise<void> {
 		await Promise.all([
 			this.statsStorage.updateDailyStats(date, difference),
 			this.statsStorage.updateHourlyStats(date, difference),
-			this.statsStorage.saveLastTotalCharacterCount(total),
 		]);
 	}
 

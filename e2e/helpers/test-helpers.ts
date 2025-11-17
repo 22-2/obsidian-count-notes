@@ -5,7 +5,7 @@ import type { ObsidianAPI } from "obsidian-e2e-toolkit";
 import { splitMd } from "src/utils/markdwon";
 import { PLUGIN_ID } from "./constants";
 
-export const METADATA_CACHE_WAIT_MS = 500;
+export const METADATA_CACHE_WAIT_MS = 1500;
 
 export interface TestFile {
 	path: string;
@@ -49,6 +49,9 @@ export class TestHelpers {
 
 	// ========== Data Collection ==========
 	async collectData(): Promise<DataCollectionResult | null> {
+		// Wait for metadata cache before collecting data
+		await this.waitForMetadataCache();
+		
 		const plugin = await this.obsidian.plugin(PLUGIN_ID);
 		return plugin.evaluate(async (plugin) => {
 			await plugin.collectData();
@@ -65,10 +68,13 @@ export class TestHelpers {
 	}
 
 	async getCharacterCount(): Promise<number> {
+		// Wait for metadata cache before getting character count
+		await this.waitForMetadataCache();
+		
 		return this.obsidian.page.evaluate(async (pluginId) => {
 			const plugin = app.plugins.getPlugin(pluginId) as any;
-			await plugin.collectData();
-			return await plugin.statsStorage.getLastTotalCharacterCount();
+			// 直接現在の合計文字数を計算する（collectData経由だと差分計算で0になる可能性がある）
+			return await plugin.dataCollectionService.calculateTotalCharacterCount();
 		}, PLUGIN_ID);
 	}
 
@@ -91,8 +97,23 @@ export class TestHelpers {
 	}
 
 	// ========== Utility Functions ==========
-	async waitForMetadataCache(): Promise<void> {
-		await this.obsidian.page.waitForTimeout(METADATA_CACHE_WAIT_MS);
+	async waitForMetadataCache(timeoutMs: number = 3000): Promise<void> {
+		await this.obsidian.page.evaluate((timeout) => {
+			return new Promise<void>((resolve, reject) => {
+				const timeoutId = setTimeout(() => {
+					app.metadataCache.off("changed", onChange);
+					resolve(); // タイムアウトしても続行
+				}, timeout);
+
+				const onChange = () => {
+					clearTimeout(timeoutId);
+					app.metadataCache.off("changed", onChange);
+					resolve();
+				};
+				
+				app.metadataCache.on("changed", onChange);
+			});
+		}, timeoutMs);
 	}
 
 	calculateExpectedCharacterCount(files: TestFile[]): number {
