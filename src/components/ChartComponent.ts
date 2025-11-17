@@ -221,8 +221,11 @@ export class ChartComponent {
 	}
 
 	private createYAxisConfig(colors: any, chartData: ChartData<"bar">) {
-		const maxValue = this.getMaxValueFromChartData(chartData);
-		const stepSize = this.calculateStepSize(maxValue);
+		const { minValue, maxValue, maxAbsValue } =
+			this.getValueRangeFromChartData(chartData);
+		const stepSize = this.calculateStepSize(maxAbsValue);
+		const suggestedMin = minValue < 0 ? minValue - stepSize : 0;
+		const suggestedMax = maxValue > 0 ? maxValue + stepSize : stepSize;
 
 		return {
 			ticks: {
@@ -233,7 +236,7 @@ export class ChartComponent {
 				callback: function (value: any) {
 					if (typeof value === "number") {
 						if (value === 0) return "0";
-						if (value >= 1000) {
+						if (Math.abs(value) >= 1000) {
 							return (value / 1000).toLocaleString() + "k";
 						}
 						return value.toLocaleString();
@@ -245,7 +248,9 @@ export class ChartComponent {
 				color: colors.gridColor,
 				lineWidth: 1,
 			},
-			beginAtZero: true,
+			beginAtZero: minValue >= 0,
+			suggestedMin,
+			suggestedMax,
 		};
 	}
 
@@ -260,18 +265,22 @@ export class ChartComponent {
 						if (!meta.hidden) {
 							meta.data.forEach((bar: any, index: number) => {
 								const value = dataset.data[index];
-								if (value > 0) {
+								if (typeof value === "number" && value !== 0) {
 									ctx.fillStyle = colors.textPrimary;
 									ctx.font = "bold 11px sans-serif";
 									ctx.textAlign = "center";
-									ctx.textBaseline = "bottom";
-									
-									// バーの上部から十分な距離を取ってラベルを配置
-									const labelY = Math.max(bar.y - 8, chart.chartArea.top + 15);
+									ctx.textBaseline = value > 0 ? "bottom" : "top";
+
+									const offset = 8;
+									const clampedY =
+										value > 0
+											? Math.max(bar.y - offset, chart.chartArea.top + 15)
+											: Math.min(bar.y + offset, chart.chartArea.bottom - 15);
+
 									ctx.fillText(
 										value.toLocaleString(),
 										bar.x,
-										labelY
+										clampedY
 									);
 								}
 							});
@@ -288,7 +297,7 @@ export class ChartComponent {
 
 		chartData.datasets.forEach((dataset) => {
 			dataset.data.forEach((value) => {
-				if (typeof value === "number" && value > 0) {
+				if (typeof value === "number" && value !== 0) {
 					totalValue += value;
 					count++;
 				}
@@ -298,18 +307,26 @@ export class ChartComponent {
 		return count > 0 ? totalValue / count : 0;
 	}
 
-	private getMaxValueFromChartData(chartData: ChartData<"bar">): number {
-		let maxValue = 0;
+	private getValueRangeFromChartData(chartData: ChartData<"bar">) {
+		let minValue = Infinity;
+		let maxValue = -Infinity;
 
 		chartData.datasets.forEach((dataset) => {
 			dataset.data.forEach((value) => {
 				if (typeof value === "number") {
-					maxValue = Math.max(maxValue, Math.abs(value));
+					minValue = Math.min(minValue, value);
+					maxValue = Math.max(maxValue, value);
 				}
 			});
 		});
 
-		return maxValue;
+		if (minValue === Infinity || maxValue === -Infinity) {
+			minValue = 0;
+			maxValue = 0;
+		}
+
+		const maxAbsValue = Math.max(Math.abs(minValue), Math.abs(maxValue));
+		return { minValue, maxValue, maxAbsValue };
 	}
 
 	private calculateStepSize(maxValue: number): number {

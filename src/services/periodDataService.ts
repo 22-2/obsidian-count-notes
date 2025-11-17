@@ -123,8 +123,8 @@ export class PeriodDataService {
 		const streak = this.calculateStreak(dailyStats);
 
 		return {
-			total: Math.max(0, todayCount),
-			average: Math.max(0, average),
+			total: todayCount,
+			average,
 			streak,
 			periodLabel: "今日",
 		};
@@ -140,12 +140,12 @@ export class PeriodDataService {
 			hourlyStats,
 			todayString
 		);
-		const nonEmptySlots = slotTotals.filter((total) => total > 0);
+		const usedSlots = slotTotals.filter((total) => total !== 0);
 
-		return nonEmptySlots.length > 0
+		return usedSlots.length > 0
 			? Math.round(
-					nonEmptySlots.reduce((acc, val) => acc + val, 0) /
-						nonEmptySlots.length
+					usedSlots.reduce((acc, val) => acc + val, 0) /
+						usedSlots.length
 			  )
 			: 0;
 	}
@@ -220,11 +220,8 @@ export class PeriodDataService {
 			return this.createEmptyStats(periodLabel);
 		}
 
-		const total = periodData.reduce(
-			(sum, [, count]) => sum + Math.max(0, count),
-			0
-		);
-		const writingDays = periodData.filter(([, count]) => count > 0).length;
+		const total = periodData.reduce((sum, [, count]) => sum + count, 0);
+		const writingDays = periodData.filter(([, count]) => count !== 0).length;
 		const average = writingDays > 0 ? Math.round(total / writingDays) : 0;
 		const streak = this.calculateStreak(dailyStats);
 
@@ -265,7 +262,7 @@ export class PeriodDataService {
 			);
 			chartData.push({
 				label: `${slotStart}h`,
-				value: Math.max(0, slotTotal),
+				value: slotTotal,
 				date: `${dateString}-${this.formatHour(slotStart)}`,
 			});
 		}
@@ -300,7 +297,7 @@ export class PeriodDataService {
 
 			return {
 				label: dayOfWeek,
-				value: Math.max(0, count),
+				value: count,
 				date: dateString,
 			};
 		});
@@ -355,7 +352,7 @@ export class PeriodDataService {
 		for (let day = startDay; day <= endDay; day++) {
 			const dateKey = this.formatDate(year, month, day);
 			const dayCount = dailyStats?.[dateKey] || 0;
-			total += Math.max(0, dayCount);
+			total += dayCount;
 		}
 		return total;
 	}
@@ -390,7 +387,7 @@ export class PeriodDataService {
 			const monthPrefix = `${year}-${month.toString().padStart(2, "0")}`;
 			Object.entries(dailyStats).forEach(([dateString, count]) => {
 				if (dateString.startsWith(monthPrefix)) {
-					total += Math.max(0, count);
+					total += count;
 				}
 			});
 		});

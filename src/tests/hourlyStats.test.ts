@@ -252,10 +252,11 @@ describe("Hourly Stats - Time-based Data Collection", () => {
 			const testService = new PeriodDataService(storage as any);
 			const chartData = await testService.getChartData("day");
 
-			// 負の値は0として扱われる
-			chartData.forEach((point) => {
-				expect(point.value).toBeGreaterThanOrEqual(0);
-			});
+			const negativeSlots = chartData.filter((point) => point.value < 0);
+			expect(negativeSlots).to.have.lengthOf(2);
+
+			const stats = await testService.getPeriodStats("day");
+			expect(stats.total).toBe(-100);
 		});
 	});
 

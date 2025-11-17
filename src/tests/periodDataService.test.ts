@@ -87,11 +87,29 @@ describe("PeriodDataService", () => {
 			const stats = await weeklyService.getPeriodStats("week");
 
 			expect(stats).toMatchObject({
-				total: 750,
-				average: 188,
+				total: 700,
+				average: 140,
 				streak: 2,
 				periodLabel: "今週",
 			});
+		});
+
+		test("should expose negative totals when deletions exceed additions", async () => {
+			const hourlyStats = {
+				"2025-10-02-08": -300,
+			};
+			const negativeStats = new MockStatsStorage(
+				{ [TEST_DATE]: -300 },
+				hourlyStats
+			);
+			const negativeService = new PeriodDataService(negativeStats as any);
+
+			const stats = await negativeService.getPeriodStats("day");
+			expect(stats.total).toBe(-300);
+			const chartData = await negativeService.getChartData("day");
+			expect(chartData.find((point) => point.label === "8h")?.value).toBe(
+				-300
+			);
 		});
 
 		test("should continue streak from previous day when today has no count", async () => {
@@ -127,7 +145,7 @@ describe("PeriodDataService", () => {
 			const monthlyService = new PeriodDataService(dailyStats as any);
 
 			const chartData = await monthlyService.getChartData("month");
-			expect(chartData[0]).toMatchObject({ label: "1-5日", value: 600 });
+			expect(chartData[0]).toMatchObject({ label: "1-5日", value: 550 });
 			expect(chartData[1]).toMatchObject({ label: "6-10日", value: 500 });
 			expect(chartData[2]).toMatchObject({ label: "11-15日", value: 500 });
 		});
@@ -146,7 +164,7 @@ describe("PeriodDataService", () => {
 
 			expect(chartData).toEqual([
 				{ label: "Q1", value: 150, date: "2025-01-01" },
-				{ label: "Q2", value: 0, date: "2025-04-01" },
+				{ label: "Q2", value: -100, date: "2025-04-01" },
 				{ label: "Q3", value: 200, date: "2025-07-01" },
 				{ label: "Q4", value: 300, date: "2025-10-01" },
 			]);

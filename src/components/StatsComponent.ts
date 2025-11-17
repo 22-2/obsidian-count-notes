@@ -22,8 +22,8 @@ export class StatsComponent {
 				stats.total.toLocaleString(),
 				"文字"
 			);
-			// 平均が0より大きい場合のみ表示
-			if (stats.average > 0) {
+			// 平均が0の場合は非表示のまま
+			if (stats.average !== 0) {
 				this.createSummaryItem(
 					summaryContent,
 					"4時間の平均",

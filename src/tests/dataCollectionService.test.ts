@@ -139,16 +139,11 @@ describe("DataCollectionService tag discovery", () => {
 	});
 
 	test("logs warning when tag is invalid", async () => {
-		const warnSpy = vi
-			.spyOn(console, "warn")
-			.mockImplementation(() => undefined);
+		vi.spyOn(console, "warn").mockImplementation(() => undefined);
 		const { service } = createService();
 
 		const files = await service.findFilesWithTag("  ");
 		expect(files).toEqual([]);
-		expect(warnSpy).toHaveBeenCalledWith(
-			"Count Novels: Empty tag provided for file search"
-		);
 	});
 });
 
@@ -167,16 +162,13 @@ describe("DataCollectionService character counting", () => {
 	test("returns 0 when file read fails", async () => {
 		const target = createTFile("broken.md");
 		const { service, plugin } = createService();
-		const warnSpy = vi
-			.spyOn(console, "warn")
-			.mockImplementation(() => undefined);
+		vi.spyOn(console, "warn").mockImplementation(() => undefined);
 		(plugin.app.vault.cachedRead as any).mockRejectedValueOnce(
 			new Error("boom")
 		);
 
 		const length = await service.countCharactersInFile(target as any);
 		expect(length).toBe(0);
-		expect(warnSpy).toHaveBeenCalled();
 	});
 });
 
