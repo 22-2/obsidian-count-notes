@@ -1,5 +1,5 @@
 import log from "loglevel";
-import { Plugin, TFile, getAllTags } from "obsidian";
+import { Plugin, TFile } from "obsidian";
 import { CountNovelView } from "./CountNovelView";
 import { DataStorage } from "./data";
 import { DEFAULT_SETTINGS, type CountNovelsSettings } from "./schemas";
@@ -7,6 +7,7 @@ import { DataCollectionService } from "./services/dataCollection";
 import { StatsStorage } from "./services/statsStorage";
 import { CountNovelsSettingTab } from "./settings";
 import { VIEW_TYPE_COUNT_NOVEL } from "./utils/constants";
+import { getAllTags } from "./utils/markdwon";
 
 export default class CountNovelsPlugin extends Plugin {
 	settings: CountNovelsSettings = DEFAULT_SETTINGS;
@@ -43,21 +44,11 @@ export default class CountNovelsPlugin extends Plugin {
 		// Monitor file modifications to trigger data collection
 		this.registerEvent(
 			this.app.vault.on("modify", async (file) => {
-				if (!(file instanceof TFile)) {
-					return;
-				}
-				if (file.extension !== "md") {
+				if (!(file instanceof TFile) || file.extension !== "md") {
 					return;
 				}
 
-				const cache = this.app.metadataCache.getFileCache(file);
-				if (!cache) {
-					return;
-				}
-
-				const tags = (getAllTags(cache) || []).map((tag) =>
-					tag.replace(/^#/, "")
-				);
+				const tags = getAllTags(file.path, this.app);
 
 				if (!tags.includes(this.settings.trackingTag)) {
 					return;

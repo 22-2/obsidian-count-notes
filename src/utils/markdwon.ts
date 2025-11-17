@@ -1,7 +1,7 @@
-import type { App } from "electron";
-import type { FileManager, TFile } from "obsidian";
+import type { App as ElectronApp } from "electron";
+import type { App, FileManager, TFile } from "obsidian";
 
-export function getFrontmatterAsync(app: App, file: TFile): any {
+export function getFrontmatterAsync(app: ElectronApp, file: TFile): any {
 	return new Promise((resolve) => {
 		return ((app as any).fileManager as FileManager).processFrontMatter(
 			file,
@@ -35,4 +35,20 @@ export function splitMd(markdownText: string): {
 		content,
 		frontmatter,
 	};
+}
+
+export function getAllTags(path: string, app: App): string[] {
+	const cache = app.metadataCache.getCache(path);
+	if (!cache) {
+		return [];
+	}
+
+	// YAML frontmatter tags
+	if (cache?.frontmatter?.tags) {
+		const frontmatterTags = cache.frontmatter.tags as string | string[];
+		return Array.isArray(frontmatterTags)
+			? frontmatterTags
+			: [frontmatterTags];
+	}
+	return [];
 }
