@@ -30,6 +30,10 @@ class MockStatsStorage implements Partial<StatsStorage> {
 
 // テスト用の日付を固定 (例: 2025-10-02)
 const MOCK_DATE = new Date(2025, 9, 2);
+const TEST_DATE = "2025-10-02";
+
+const hourlyKey = (date: string, hour: number) =>
+	`${date}-${hour.toString().padStart(2, "0")}`;
 
 describe("PeriodDataService", () => {
 	let service: PeriodDataService;
@@ -45,14 +49,14 @@ describe("PeriodDataService", () => {
 
 	beforeEach(() => {
 		const mockDailyStats = {
-			"2025-10-02": 1500,
+			[TEST_DATE]: 1500,
 			"2025-10-01": 1000,
 			"2025-09-30": 500,
 			"2025-07-15": 1200,
 		};
 		const mockHourlyStats = {
-			"2025-10-02-8": 500,
-			"2025-10-02-9": 1000,
+			[hourlyKey(TEST_DATE, 8)]: 500,
+			[hourlyKey(TEST_DATE, 9)]: 1000,
 		};
 
 		const mockStorage = new MockStatsStorage(

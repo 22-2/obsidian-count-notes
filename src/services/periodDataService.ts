@@ -181,7 +181,7 @@ export class PeriodDataService {
 	): number {
 		let total = 0;
 		for (let hour = startHour; hour < startHour + duration; hour++) {
-			const timeSlotKey = `${dateString}-${String(hour).padStart(2, '0')}`;
+			const timeSlotKey = `${dateString}-${this.formatHour(hour)}`;
 			total += hourlyStats[timeSlotKey] || 0;
 		}
 		return total;
@@ -266,7 +266,7 @@ export class PeriodDataService {
 			chartData.push({
 				label: `${slotStart}h`,
 				value: Math.max(0, slotTotal),
-				date: `${dateString}-${slotStart}`,
+				date: `${dateString}-${this.formatHour(slotStart)}`,
 			});
 		}
 
@@ -284,7 +284,7 @@ export class PeriodDataService {
 			chartData.push({
 				label: `${hour}h`,
 				value: 0,
-				date: `${dateString}-${hour}`,
+				date: `${dateString}-${this.formatHour(hour)}`,
 			});
 		}
 
@@ -490,6 +490,10 @@ export class PeriodDataService {
 		}
 
 		return streak;
+	}
+
+	private formatHour(hour: number): string {
+		return hour.toString().padStart(2, "0");
 	}
 
 	private formatDateString(date: Date): string {

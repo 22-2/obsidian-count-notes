@@ -31,6 +31,10 @@ class MockStatsStorage implements Partial<StatsStorage> {
 
 // テスト用の日付を固定 (例: 2025-10-02)
 const MOCK_DATE = new Date(2025, 9, 2);
+const TEST_DATE = "2025-10-02";
+
+const hourlyKey = (date: string, hour: number) =>
+	`${date}-${hour.toString().padStart(2, "0")}`;
 
 describe("Hourly Stats - Time-based Data Collection", () => {
 	let service: PeriodDataService;
@@ -46,18 +50,18 @@ describe("Hourly Stats - Time-based Data Collection", () => {
 
 	beforeEach(() => {
 		const dailyStats = {
-			"2025-10-02": 2400, // 今日の合計
+			[TEST_DATE]: 2400, // 今日の合計
 		};
 		const hourlyStats = {
 			// 今日の時間別データ（1時間単位）
-			"2025-10-02-9": 300, // 9時台
-			"2025-10-02-10": 400, // 10時台
-			"2025-10-02-11": 300, // 11時台（8-12hスロット合計: 1000）
-			"2025-10-02-14": 500, // 14時台
-			"2025-10-02-15": 200, // 15時台（12-16hスロット合計: 700）
-			"2025-10-02-17": 350, // 17時台
-			"2025-10-02-18": 250, // 18時台（16-20hスロット合計: 600）
-			"2025-10-02-21": 100, // 21時台（20-24hスロット合計: 100）
+			[hourlyKey(TEST_DATE, 9)]: 300, // 9時台
+			[hourlyKey(TEST_DATE, 10)]: 400, // 10時台
+			[hourlyKey(TEST_DATE, 11)]: 300, // 11時台（8-12hスロット合計: 1000）
+			[hourlyKey(TEST_DATE, 14)]: 500, // 14時台
+			[hourlyKey(TEST_DATE, 15)]: 200, // 15時台（12-16hスロット合計: 700）
+			[hourlyKey(TEST_DATE, 17)]: 350, // 17時台
+			[hourlyKey(TEST_DATE, 18)]: 250, // 18時台（16-20hスロット合計: 600）
+			[hourlyKey(TEST_DATE, 21)]: 100, // 21時台（20-24hスロット合計: 100）
 		};
 
 		const mockStorage = new MockStatsStorage(dailyStats, hourlyStats);
@@ -96,10 +100,10 @@ describe("Hourly Stats - Time-based Data Collection", () => {
 		});
 
 		test("should handle partial hour data within 4-hour slots", async () => {
-			const dailyStats = { "2025-10-02": 500 };
+			const dailyStats = { [TEST_DATE]: 500 };
 			const hourlyStats = {
-				"2025-10-02-8": 200, // 8時台のみ
-				"2025-10-02-13": 300, // 13時台のみ
+				[hourlyKey(TEST_DATE, 8)]: 200, // 8時台のみ
+				[hourlyKey(TEST_DATE, 13)]: 300, // 13時台のみ
 			};
 
 			const partialStorage = new MockStatsStorage(dailyStats, hourlyStats);
@@ -114,7 +118,7 @@ describe("Hourly Stats - Time-based Data Collection", () => {
 		});
 
 		test("should return empty slots when no hourly data exists", async () => {
-			const dailyStats = { "2025-10-02": 0 };
+			const dailyStats = { [TEST_DATE]: 0 };
 			const hourlyStats = {};
 
 			const emptyStorage = new MockStatsStorage(dailyStats, hourlyStats);
@@ -139,10 +143,10 @@ describe("Hourly Stats - Time-based Data Collection", () => {
 		});
 
 		test("should only count non-zero slots in average calculation", async () => {
-			const dailyStats = { "2025-10-02": 1000 };
+			const dailyStats = { [TEST_DATE]: 1000 };
 			const hourlyStats = {
-				"2025-10-02-9": 500, // 8-12hスロット
-				"2025-10-02-15": 500, // 12-16hスロット
+				[hourlyKey(TEST_DATE, 9)]: 500, // 8-12hスロット
+				[hourlyKey(TEST_DATE, 15)]: 500, // 12-16hスロット
 				// 他のスロットはデータなし
 			};
 			const sparseStorage = new MockStatsStorage(
@@ -157,7 +161,7 @@ describe("Hourly Stats - Time-based Data Collection", () => {
 		});
 
 		test("should return 0 average when no hourly data exists", async () => {
-			const dailyStats = { "2025-10-02": 1000 };
+			const dailyStats = { [TEST_DATE]: 1000 };
 			const hourlyStats = {};
 			const noHourlyStorage = new MockStatsStorage(
 				dailyStats,
@@ -180,7 +184,7 @@ describe("Hourly Stats - Time-based Data Collection", () => {
 
 	describe("edge cases", () => {
 		test("should handle missing hourlyStats property", async () => {
-			const dailyStats = { "2025-10-02": 1000 };
+			const dailyStats = { [TEST_DATE]: 1000 };
 			const hourlyStats = undefined; // hourlyStats プロパティが存在しない
 			const storage = new MockStatsStorage(dailyStats, hourlyStats);
 			const testService = new PeriodDataService(storage as any);
@@ -192,12 +196,12 @@ describe("Hourly Stats - Time-based Data Collection", () => {
 		});
 
 		test("should handle all hours in a single 4-hour slot", async () => {
-			const dailyStats = { "2025-10-02": 1600 };
+			const dailyStats = { [TEST_DATE]: 1600 };
 			const hourlyStats = {
-				"2025-10-02-8": 400,
-				"2025-10-02-9": 400,
-				"2025-10-02-10": 400,
-				"2025-10-02-11": 400,
+				[hourlyKey(TEST_DATE, 8)]: 400,
+				[hourlyKey(TEST_DATE, 9)]: 400,
+				[hourlyKey(TEST_DATE, 10)]: 400,
+				[hourlyKey(TEST_DATE, 11)]: 400,
 			};
 
 			const storage = new MockStatsStorage(dailyStats, hourlyStats);
@@ -216,12 +220,12 @@ describe("Hourly Stats - Time-based Data Collection", () => {
 		});
 
 		test("should handle data across all 24 hours", async () => {
-			const dailyStats: any = { "2025-10-02": 2400 };
+			const dailyStats: any = { [TEST_DATE]: 2400 };
 			const hourlyStats: any = {};
 
 			// 0-23時まで全ての時間に100文字ずつ
 			for (let hour = 0; hour < 24; hour++) {
-				hourlyStats[`2025-10-02-${hour}`] = 100;
+				hourlyStats[hourlyKey(TEST_DATE, hour)] = 100;
 			}
 
 			const storage = new MockStatsStorage(dailyStats, hourlyStats);
@@ -239,10 +243,10 @@ describe("Hourly Stats - Time-based Data Collection", () => {
 		});
 
 		test("should handle negative values gracefully", async () => {
-			const dailyStats = { "2025-10-02": -100 };
+			const dailyStats = { [TEST_DATE]: -100 };
 			const hourlyStats = {
-				"2025-10-02-10": -50,
-				"2025-10-02-14": -50,
+				[hourlyKey(TEST_DATE, 10)]: -50,
+				[hourlyKey(TEST_DATE, 14)]: -50,
 			};
 			const storage = new MockStatsStorage(dailyStats, hourlyStats);
 			const testService = new PeriodDataService(storage as any);
@@ -260,8 +264,8 @@ describe("Hourly Stats - Time-based Data Collection", () => {
 			const chartData = await service.getChartData("day");
 
 			chartData.forEach((point) => {
-				// YYYY-MM-DD-HH形式
-				expect(point.date).toMatch(/^\d{4}-\d{2}-\d{2}-\d{1,2}$/);
+				// YYYY-MM-DD-HH形式 (HHはゼロパディング)
+				expect(point.date).toMatch(/^\d{4}-\d{2}-\d{2}-\d{2}$/);
 			});
 		});
 
@@ -269,9 +273,9 @@ describe("Hourly Stats - Time-based Data Collection", () => {
 			const chartData = await service.getChartData("day");
 
 			// 各スロットの開始時刻を確認
-			expect(chartData[0].date).toContain("-0");
-			expect(chartData[1].date).toContain("-4");
-			expect(chartData[2].date).toContain("-8");
+			expect(chartData[0].date).toContain("-00");
+			expect(chartData[1].date).toContain("-04");
+			expect(chartData[2].date).toContain("-08");
 			expect(chartData[3].date).toContain("-12");
 			expect(chartData[4].date).toContain("-16");
 			expect(chartData[5].date).toContain("-20");

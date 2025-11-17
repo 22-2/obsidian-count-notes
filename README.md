@@ -1,96 +1,118 @@
-# Obsidian Sample Plugin
+# Count Novels Plugin
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+Count Novels automatically tracks how many characters you write inside Obsidian. Pick a single tag (default: `novel`), keep writing, and the plugin will log daily/hourly progress, refresh a dedicated sidebar view, and show how fresh your latest measurement is via the status bar.
 
-This project uses Typescript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in Typescript Definition format, which contains TSDoc comments describing what it does.
+## Features
 
-**Note:** The Obsidian API is still in early alpha and is subject to change at any time!
+- **Tag-based collection** – scans every markdown note that carries the configured tracking tag (inline `#tag` or frontmatter `tags`) and counts characters excluding frontmatter.
+- **Automated sampling** – runs once during plugin startup and every 10 minutes afterward; you can also trigger “Collect Data Manually (Debug)” from the command palette.
+- **Persistent stats** – stores totals, daily deltas, and hourly deltas in IndexedDB (`obsidian-count-novels-db`) while user settings + last view state stay in Obsidian’s `data.json`.
+- **Progress view** – adds a ribbon icon (`chart-column-big`) that opens the Count Novels view with tabs for day / week / month / year, summaries (total, averages, streak), and a Chart.js bar chart with an average line.
+- **Status bar indicator** – shows `Count Novels: Measured …` based on the last successful collection timestamp so you can confirm sampling is alive.
+- **Structured logging** – uses `loglevel`; switch between `debug` and `info` from the plugin settings.
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+## Quick Start
 
-## First time developing plugins?
+1. **Install dependencies**
 
-Quick starting guide for new plugin devs:
+   ```powershell
+   pnpm install
+   ```
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `pnpm i` in the command line under your repo folder.
-- Run `pnpm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `pnpm update` in the command line under your repo folder.
+2. **Develop locally** – keep the watcher running during Obsidian development.
 
-## Releasing new releases
+   ```powershell
+   pnpm dev
+   ```
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+3. **Link into a vault** – copy `manifest.json`, `main.js`, and `styles.css` from the repository root into `Vault/.obsidian/plugins/obsidian-count-novels/`, then reload Obsidian and enable the plugin.
 
-> You can simplify the version bump process by running `pnpm version patch`, `pnpm version minor` or `pnpm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+4. **Configure** – open *Settings → Community Plugins → Count Novels Plugin* and set:
+   - `Tracking Tag` (defaults to `novel`).
+   - `Show Debug Messages` toggle (sets `logLevel` to `debug` or `info`).
 
-## Adding your plugin to the community plugin list
+5. **Verify data collection** – write in a tagged note, run the “Collect Data Manually (Debug)” command, and watch the status bar change to “Measured just now.”
 
-- Check https://github.com/obsidianmd/obsidian-releases/blob/master/plugin-review.md
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+## Usage Guide
 
-## How to use
+### Collection Schedule
+- On plugin load (`onload`): loads settings/data, collects data once, updates the status bar, and refreshes open Count Novels views.
+- Every 10 minutes: `DataCollectionService.collectData()` runs via `window.setInterval` and records only positive deltas (negative/zero differences just update the stored total).
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `pnpm i` or `yarn` to install dependencies.
-- `pnpm run dev` to start compilation in watch mode.
+### Count Novels View
+- Open via the ribbon icon or the “Open Count Novels Home” command.
+- Tabs (`TabComponent`) switch between `day`, `week`, `month`, `year`; the selection persists in `data.json`.
+- `StatsComponent` shows:
+  - Day: today’s total, 4-hour average, streak.
+  - Week / Month / Year: period total, daily average (writing days only), streak.
+- `ChartComponent` renders a bar chart that matches the selected period and overlays an average annotation line. Hourly charts aggregate 4-hour slots (`00, 04, 08, 12, 16, 20`).
 
-## Manually installing the plugin
+### Status Bar Indicator
+- Text appears immediately after the first successful collection.
+- Updates every minute; phrases:
+  - `Count Novels: No data collected yet` – nothing stored.
+  - `Count Novels: Measured just now` – collected within the last minute.
+  - `Count Novels: Measured X minutes ago` – simple minute delta.
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+## Data Model
 
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `pnpm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint .\src\`
-
-## Funding URL
-
-You can include funding URLs where people who use your plugin can financially support it.
-
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
-
-```json
+### `data.json`
+```jsonc
 {
-    "fundingUrl": "https://buymeacoffee.com"
+  "settings": {
+    "logLevel": "debug",
+    "trackingTag": "novel"
+  },
+  "lastViewState": {
+    "period": "month"
+  },
+  "lastCollectedAt": "2025-10-02T10:00:00.000Z"
 }
 ```
 
-If you have multiple URLs, you can also do:
+### `obsidian-count-novels-db` (Dexie)
 
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
+| Table          | Key                               | Value                                  | Notes |
+|----------------|-----------------------------------|----------------------------------------|-------|
+| `dailyStats`   | `date` (`YYYY-MM-DD`)              | `{ count: number }`                    | Only positive deltas accumulate. |
+| `hourlyStats`  | `datetime` (`YYYY-MM-DD-HH`)       | `{ count: number }`                    | **HH is zero-padded** (`00`–`23`) so downstream code and tests can read consistently. |
+| `misc`         | `key`                              | `{ value: any }`                       | Currently stores `lastTotalCharacterCount`. |
+
+Keeping the `HH` section zero-padded is critical—`PeriodDataService` and the Vitest suite expect that format. Whenever you write custom fixtures, ensure keys follow `YYYY-MM-DD-08` instead of `YYYY-MM-DD-8`.
+
+## Development
+
+| Script              | Description |
+|---------------------|-------------|
+| `pnpm dev`          | Builds once and watches via `esbuild.config.mts`. |
+| `pnpm build`        | Production build (minified). |
+| `pnpm check-types`  | Runs `tsc --noEmit` against `src/`. |
+| `pnpm test`         | Executes Vitest (unit tests + Dexie-backed suites). |
+| `pnpm test:watch`   | Watches with Vitest. |
+| `pnpm test:coverage`| Collects coverage. |
+| `pnpm test:e2e`     | Playwright-based Obsidian E2E tests (needs repo CI permissions; local runs may be blocked per `AGENTS.md`). |
+
+### Key Modules
+- `src/main.ts` – plugin entrypoint, service wiring, status bar setup.
+- `src/services/dataCollection.ts` – tag filtering, counting, diff computation, and stats persistence.
+- `src/services/statsStorage.ts` – Dexie helpers for daily/hourly stats and the rolling total.
+- `src/services/periodDataService.ts` – aggregates data into view-friendly stats + chart series.
+- `src/CountNovelView.ts` – Obsidian view that composes tabs, stats, and chart components.
+
+## Testing
+
+Unit tests rely on `fake-indexeddb` and Vitest. Run them whenever you touch storage, aggregation, or view-state logic:
+
+```powershell
+pnpm test
 ```
 
-## API Documentation
+The repository follows a “black-box-friendly” philosophy: tests operate through public service surfaces (`StatsStorage`, `PeriodDataService`) and validate observable outcomes like aggregated slot totals and streak calculations. For full-stack confidence, push your branch and let the GitHub workflow execute Playwright E2E scenarios (local environments lack the necessary permissions, as noted in `AGENTS.md`).
 
-See https://github.com/obsidianmd/obsidian-api
+## Troubleshooting
+
+- **No data appears in the view** – ensure at least one tagged note exists, then trigger manual collection to seed `dailyStats`.
+- **Chart slot shows 0 despite recent writing** – confirm hourly documents use zero-padded keys or simply rely on `StatsStorage.updateHourlyStats`, which enforces the format.
+- **Status bar stuck on “No data collected yet”** – check the console for `Count Novels: Data collection failed` errors; a malformed tag or empty vault will keep totals at 0.
+
+Stay focused on the core workflow—tagged writing sessions flowing into reliable stats—before layering future ideas like heatmaps or goals (see `AGENTS.md` for the roadmap).
