@@ -69,8 +69,8 @@ export const HourlyStatsSchema = z.record(
 	z
 		.string()
 		.regex(
-			/^\d{4}-\d{2}-\d{2}-\d{1,2}$/,
-			"Time slot must be in YYYY-MM-DD-HH format (HH: 0-23)"
+			/^\d{4}-\d{2}-\d{2}-\d{2}$/,
+			"Time slot must be in YYYY-MM-DD-HH format (HH: 00-23)"
 		),
 	z.number().int()
 );

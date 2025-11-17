@@ -13,7 +13,8 @@ export default class CountNovelsPlugin extends Plugin {
 	dataStorage!: DataStorage;
 	statsStorage!: StatsStorage;
 	dataCollectionService!: DataCollectionService;
-	private intervalId?: number;
+	private dataCollectionIntervalId?: number;
+	private statusBarUpdateIntervalId?: number;
 	statusBarItemEl!: HTMLElement;
 
 	async onload() {
@@ -23,7 +24,7 @@ export default class CountNovelsPlugin extends Plugin {
 			await this.startDataCollection();
 			this.updateStatusBar();
 		} catch (error) {
-			console.error("Count Novels: Failed to initialize plugin:", error);
+			log.error("Count Novels: Failed to initialize plugin:", error);
 		}
 	}
 
@@ -83,17 +84,17 @@ export default class CountNovelsPlugin extends Plugin {
 				this.app.workspace.revealLeaf(leaf);
 			}
 		} catch (error) {
-			console.error("Count Novels: Failed to open view:", error);
+			log.error("Count Novels: Failed to open view:", error);
 		}
 	}
 
 	private async handleManualDataCollection(): Promise<void> {
-		console.log("Count Novels: Manual data collection triggered");
+		log.log("Count Novels: Manual data collection triggered");
 		try {
 			await this.collectData();
-			console.log("Count Novels: Manual data collection completed");
+			log.log("Count Novels: Manual data collection completed");
 		} catch (error) {
-			console.error(
+			log.error(
 				"Count Novels: Manual data collection failed:",
 				error
 			);
@@ -104,10 +105,12 @@ export default class CountNovelsPlugin extends Plugin {
 		await this.dataStorage.loadData();
 		await this.dataCollectionService.collectData();
 		this.startPeriodicDataCollection();
+		this.startStatusBarUpdate();
 	}
 
 	onunload() {
 		this.stopPeriodicDataCollection();
+		this.stopStatusBarUpdate();
 	}
 
 	updateStatusBar(): void {
@@ -158,7 +161,7 @@ export default class CountNovelsPlugin extends Plugin {
 				pluginData.settings
 			);
 		} catch (error) {
-			console.error("Count Novels: Failed to load settings:", error);
+			log.error("Count Novels: Failed to load settings:", error);
 			this.settings = DEFAULT_SETTINGS;
 		}
 	}
@@ -168,7 +171,7 @@ export default class CountNovelsPlugin extends Plugin {
 			this.dataStorage.updateData({ settings: this.settings });
 			await this.dataStorage.saveData();
 		} catch (error) {
-			console.error("Count Novels: Failed to save settings:", error);
+			log.error("Count Novels: Failed to save settings:", error);
 		}
 	}
 
@@ -179,7 +182,7 @@ export default class CountNovelsPlugin extends Plugin {
 			await this.dataStorage.saveData();
 			this.updateStatusBar();
 		} catch (error) {
-			console.error("Count Novels: Data collection failed:", error);
+			log.error("Count Novels: Data collection failed:", error);
 			throw error;
 		}
 	}
@@ -190,24 +193,24 @@ export default class CountNovelsPlugin extends Plugin {
 		const COLLECTION_INTERVAL = 10 * 60 * 1000; // 10分間隔
 
 		this.registerInterval(
-			(this.intervalId = window.setInterval(
+			(this.dataCollectionIntervalId = window.setInterval(
 				() => this.handlePeriodicDataCollection(),
 				COLLECTION_INTERVAL
 			))
 		);
 
-		console.log(
+		log.log(
 			"Count Novels: Periodic data collection started (10-minute interval)"
 		);
 	}
 
 	private async handlePeriodicDataCollection(): Promise<void> {
-		console.log("Count Novels: Periodic data collection triggered");
+		log.log("Count Novels: Periodic data collection triggered");
 		try {
 			await this.collectData();
-			console.log("Count Novels: Periodic data collection completed");
+			log.log("Count Novels: Periodic data collection completed");
 		} catch (error) {
-			console.error(
+			log.error(
 				"Count Novels: Error during periodic data collection:",
 				error
 			);
@@ -215,10 +218,35 @@ export default class CountNovelsPlugin extends Plugin {
 	}
 
 	private stopPeriodicDataCollection(): void {
-		if (this.intervalId) {
-			window.clearInterval(this.intervalId);
-			this.intervalId = undefined;
-			console.log("Count Novels: Periodic data collection stopped");
+		if (this.dataCollectionIntervalId) {
+			window.clearInterval(this.dataCollectionIntervalId);
+			this.dataCollectionIntervalId = undefined;
+			log.log("Count Novels: Periodic data collection stopped");
+		}
+	}
+
+	private startStatusBarUpdate(): void {
+		this.stopStatusBarUpdate();
+
+		const STATUS_BAR_UPDATE_INTERVAL = 60 * 1000; // 1分間隔
+
+		this.registerInterval(
+			(this.statusBarUpdateIntervalId = window.setInterval(
+				() => this.updateStatusBar(),
+				STATUS_BAR_UPDATE_INTERVAL
+			))
+		);
+
+		log.log(
+			"Count Novels: Status bar update started (1-minute interval)"
+		);
+	}
+
+	private stopStatusBarUpdate(): void {
+		if (this.statusBarUpdateIntervalId) {
+			window.clearInterval(this.statusBarUpdateIntervalId);
+			this.statusBarUpdateIntervalId = undefined;
+			log.log("Count Novels: Status bar update stopped");
 		}
 	}
 }

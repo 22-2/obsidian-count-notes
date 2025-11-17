@@ -181,7 +181,7 @@ export class PeriodDataService {
 	): number {
 		let total = 0;
 		for (let hour = startHour; hour < startHour + duration; hour++) {
-			const timeSlotKey = `${dateString}-${hour}`;
+			const timeSlotKey = `${dateString}-${String(hour).padStart(2, '0')}`;
 			total += hourlyStats[timeSlotKey] || 0;
 		}
 		return total;
