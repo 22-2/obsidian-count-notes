@@ -9,6 +9,7 @@ import {
 	Tooltip,
 	type ChartConfiguration,
 	type ChartData,
+	type ScriptableScaleContext,
 } from "chart.js";
 import annotationPlugin from "chartjs-plugin-annotation";
 import type { ChartDataPoint, PeriodType } from "../schemas";
@@ -245,8 +246,10 @@ export class ChartComponent {
 				},
 			},
 			grid: {
-				color: colors.gridColor,
-				lineWidth: 1,
+				color: (ctx: ScriptableScaleContext) =>
+					this.isZeroTick(ctx) ? colors.zeroLineColor : colors.gridColor,
+				lineWidth: (ctx: ScriptableScaleContext) =>
+					this.isZeroTick(ctx) ? 2 : 1,
 			},
 			beginAtZero: minValue >= 0,
 			suggestedMin,
@@ -352,6 +355,7 @@ export class ChartComponent {
 			textPrimary: "#ffffff",
 			textSecondary: "#cccccc",
 			gridColor: "#444444",
+			zeroLineColor: "#e0e0e0",
 			tooltipBg: "rgba(0, 0, 0, 0.8)",
 			tooltipBorder: "#666666",
 			positiveColor: "rgba(100, 200, 100, 0.7)",
@@ -362,6 +366,7 @@ export class ChartComponent {
 			textPrimary: "#222222",
 			textSecondary: "#666666",
 			gridColor: "#e0e0e0",
+			zeroLineColor: "#e0e0e0",
 			tooltipBg: "rgba(255, 255, 255, 0.95)",
 			tooltipBorder: "#cccccc",
 			positiveColor: "rgba(40, 160, 40, 0.7)",
@@ -369,6 +374,11 @@ export class ChartComponent {
 		};
 
 		return isDarkTheme ? darkTheme : lightTheme;
+	}
+
+	private isZeroTick(ctx: ScriptableScaleContext): boolean {
+		const value = ctx.tick?.value;
+		return typeof value === "number" && value === 0;
 	}
 
 	private renderChartFallback(chartData: ChartDataPoint[]): void {
