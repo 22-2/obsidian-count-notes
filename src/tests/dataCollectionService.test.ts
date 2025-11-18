@@ -3,6 +3,10 @@ import { DataCollectionService } from "../services/dataCollection";
 import type { StatsStorage } from "../services/statsStorage";
 import { VIEW_TYPE_COUNT_NOVEL } from "../utils/constants";
 import type { TFile } from "obsidian";
+import {
+	isPathInExcludedFolders,
+	normalizeExcludedFolders,
+} from "../utils/excludedFolders";
 
 class StatsStorageMock implements Partial<StatsStorage> {
 	getLastTotalCharacterCount = vi.fn().mockResolvedValue(0);
@@ -17,6 +21,7 @@ type ServiceOptions = {
 	fileContents?: Record<string, string>;
 	leaves?: Array<{ view: any }>;
 	trackingTag?: string;
+	excludedFolders?: string[];
 };
 
 const createService = (options: ServiceOptions = {}) => {
@@ -25,7 +30,10 @@ const createService = (options: ServiceOptions = {}) => {
 	const fileContents = options.fileContents ?? {};
 	const leaves = options.leaves ?? [];
 	const pluginMock = {
-		settings: { trackingTag: options.trackingTag ?? "novel" },
+		settings: {
+			trackingTag: options.trackingTag ?? "novel",
+			excludedFolders: options.excludedFolders ?? [],
+		},
 		app: {
 			vault: {
 				getMarkdownFiles: vi.fn().mockReturnValue(files),
@@ -138,12 +146,49 @@ describe("DataCollectionService tag discovery", () => {
 		expect(files).toEqual([inline, frontmatter]);
 	});
 
+	test("excludes files located under configured folders", async () => {
+		const included = createTFile("novels/chapter1.md");
+		const excluded = createTFile("Archive/secret.md");
+		const caches = {
+			[included.path]: { tags: [{ tag: "#novel" }] },
+			[excluded.path]: { tags: [{ tag: "#novel" }] },
+		};
+		const { service } = createService({
+			files: [included, excluded],
+			caches,
+			excludedFolders: ["Archive"],
+		});
+
+		const files = await service.findFilesWithTag("novel");
+		expect(files).toEqual([included]);
+	});
+
 	test("logs warning when tag is invalid", async () => {
 		vi.spyOn(console, "warn").mockImplementation(() => undefined);
 		const { service } = createService();
 
 		const files = await service.findFilesWithTag("  ");
 		expect(files).toEqual([]);
+	});
+});
+
+describe("DataCollectionService excluded folders helper", () => {
+	test("normalizes excluded folder inputs", () => {
+		const normalized = normalizeExcludedFolders([
+			"Archive/",
+			"archive",
+			"notes\\personal",
+		]);
+		expect(normalized).toEqual(["Archive", "notes/personal"]);
+	});
+
+	test("detects paths inside excluded folders", () => {
+		const folders = ["Archive", "notes/personal"];
+		expect(isPathInExcludedFolders("Archive/ch1.md", folders)).toBe(true);
+		expect(
+			isPathInExcludedFolders("notes/personal/ch2.md", folders)
+		).toBe(true);
+		expect(isPathInExcludedFolders("notes/general.md", folders)).toBe(false);
 	});
 });
 

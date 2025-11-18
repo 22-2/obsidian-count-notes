@@ -39,6 +39,7 @@ export const ChartDataPointSchema = z.object({
 export const CountNovelsSettingsSchema = z.object({
 	logLevel: z.enum(["debug", "info", "warn", "error", "silent"]),
 	trackingTag: z.string().min(1),
+	excludedFolders: z.array(z.string().min(1)).default([]),
 });
 
 /**
@@ -134,6 +135,7 @@ export const PERIOD_CONFIGS: Record<PeriodType, PeriodConfig> = {
 export const DEFAULT_SETTINGS: CountNovelsSettings = {
 	logLevel: "debug",
 	trackingTag: "novel",
+	excludedFolders: [],
 };
 
 /**

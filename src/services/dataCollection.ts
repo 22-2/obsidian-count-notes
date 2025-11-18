@@ -4,6 +4,7 @@ import type CountNovelsPlugin from "../main";
 import { VIEW_TYPE_COUNT_NOVEL } from "../utils/constants";
 import type { StatsStorage } from "./statsStorage";
 import log from "loglevel";
+import { isPathInExcludedFolders } from "src/utils/excludedFolders";
 
 const logger = log.getLogger("DataCollectionService");
 
@@ -28,11 +29,17 @@ export class DataCollectionService {
 		}
 
 		const files = this.plugin.app.vault.getMarkdownFiles();
+		const excludedFolders = this.plugin.settings.excludedFolders;
 		logger.log(
 			`Count Novels: Scanning ${files.length} markdown files for tag "${tag}"`
 		);
 
-		const taggedFiles = files.filter((file) => this.hasTag(file, tag));
+		const taggedFiles = files.filter((file) => {
+			if (this.shouldExclude(file, excludedFolders)) {
+				return false;
+			}
+			return this.hasTag(file, tag);
+		});
 
 		logger.log(
 			`Count Novels: Found ${taggedFiles.length} files with tag "${tag}"`
@@ -76,6 +83,20 @@ export class DataCollectionService {
 			);
 			return false;
 		}
+	}
+
+	private shouldExclude(file: TFile, excludedFolders: string[]): boolean {
+		if (!excludedFolders.length) {
+			return false;
+		}
+
+		const inExcluded = isPathInExcludedFolders(file.path, excludedFolders);
+		if (inExcluded) {
+			logger.log(
+				`Count Novels: Skipping file in excluded folder (${file.path})`
+			);
+		}
+		return inExcluded;
 	}
 
 	/**

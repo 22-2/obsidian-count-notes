@@ -6,6 +6,7 @@ class MockPlugin {
 	settings = {
 		logLevel: "debug" as const,
 		trackingTag: "novel",
+		excludedFolders: [] as string[],
 	};
 
 	loadData = vi.fn().mockResolvedValue(null);

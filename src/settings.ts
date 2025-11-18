@@ -1,6 +1,7 @@
 import { PluginSettingTab, Setting } from "obsidian";
 import type CountNovelsPlugin from "./main";
 import { type CountNovelsSettings } from "./schemas";
+import { parseExcludedFoldersInput } from "./utils/excludedFolders";
 export class CountNovelsSettingTab extends PluginSettingTab {
 	constructor(public plugin: CountNovelsPlugin) {
 		super(plugin.app, plugin);
@@ -35,6 +36,21 @@ export class CountNovelsSettingTab extends PluginSettingTab {
 						this.plugin.settings.trackingTag = value || "novel";
 						await this.plugin.saveSettings();
 					});
+			});
+
+		new Setting(this.containerEl)
+			.setName("Excluded Folders")
+			.setDesc(
+				"Relative folders to skip even when tagged. Enter one folder per line."
+			)
+			.addTextArea((text) => {
+				text.setPlaceholder("Archive\nDrafts/Personal")
+					.setValue(this.plugin.settings.excludedFolders.join("\n"))
+					.onChange(async (value) => {
+						this.plugin.settings.excludedFolders = parseExcludedFoldersInput(value);
+						await this.plugin.saveSettings();
+					});
+				text.inputEl.rows = 4;
 			});
 	}
 }

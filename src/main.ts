@@ -8,6 +8,10 @@ import { StatsStorage } from "./services/statsStorage";
 import { CountNovelsSettingTab } from "./settings";
 import { VIEW_TYPE_COUNT_NOVEL } from "./utils/constants";
 import { getAllTags } from "./utils/markdwon";
+import {
+	isPathInExcludedFolders,
+	normalizeExcludedFolders,
+} from "./utils/excludedFolders";
 
 export default class CountNovelsPlugin extends Plugin {
 	settings: CountNovelsSettings = DEFAULT_SETTINGS;
@@ -45,6 +49,18 @@ export default class CountNovelsPlugin extends Plugin {
 		this.registerEvent(
 			this.app.vault.on("modify", async (file) => {
 				if (!(file instanceof TFile) || file.extension !== "md") {
+					return;
+				}
+
+				if (
+					isPathInExcludedFolders(
+						file.path,
+						this.settings.excludedFolders
+					)
+				) {
+					log.debug(
+						`Count Novels: Ignoring excluded file modification: ${file.path}`
+					);
 					return;
 				}
 
@@ -186,6 +202,9 @@ export default class CountNovelsPlugin extends Plugin {
 				DEFAULT_SETTINGS,
 				pluginData.settings
 			);
+			this.settings.excludedFolders = normalizeExcludedFolders(
+				this.settings.excludedFolders
+			);
 		} catch (error) {
 			log.error("Count Novels: Failed to load settings:", error);
 			this.settings = DEFAULT_SETTINGS;
@@ -194,6 +213,9 @@ export default class CountNovelsPlugin extends Plugin {
 
 	async saveSettings(): Promise<void> {
 		try {
+			this.settings.excludedFolders = normalizeExcludedFolders(
+				this.settings.excludedFolders
+			);
 			this.dataStorage.updateData({ settings: this.settings });
 			await this.dataStorage.saveData();
 		} catch (error) {

@@ -57,3 +57,7 @@ export class WorkspaceLeaf {
 export type ViewStateResult = void;
 
 export class FileManager {}
+
+export const normalizePath = (value: string): string => {
+	return value.replace(/\\/g, "/").replace(/\/+/g, "/");
+};
