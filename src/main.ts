@@ -133,7 +133,7 @@ export default class CountNovelsPlugin extends Plugin {
 		}
 	}
 
-	private async handleManualDataCollection(): Promise<void> {
+	public async handleManualDataCollection(): Promise<void> {
 		log.debug("Count Novels: Manual data collection triggered");
 		try {
 			await this.collectData();
@@ -240,7 +240,7 @@ export default class CountNovelsPlugin extends Plugin {
 		this.app.workspace.iterateAllLeaves((leaf) => {
 			if (leaf.view.getViewType() === VIEW_TYPE_COUNT_NOVEL) {
 				const view = leaf.view as CountNovelView;
-				view.refreshStats();
+				view.renderView();
 			}
 		});
 	}

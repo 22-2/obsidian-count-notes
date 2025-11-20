@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, type ViewStateResult } from "obsidian";
+import { ItemView, Setting, WorkspaceLeaf, type ViewStateResult } from "obsidian";
 import { ChartComponent } from "./components/ChartComponent";
 import { StatsComponent } from "./components/StatsComponent";
 import { TabComponent } from "./components/TabComponent";
@@ -84,7 +84,7 @@ export class CountNovelView extends ItemView {
 		this.periodDataService = undefined;
 	}
 
-	private async renderView(): Promise<void> {
+	public async renderView(): Promise<void> {
 		if (!this.plugin || !this.periodDataService) {
 			this.renderErrorMessage();
 			return;
@@ -113,7 +113,12 @@ export class CountNovelView extends ItemView {
 	private async hasValidData(): Promise<boolean> {
 		const dailyStats: DailyStats =
 			await this.plugin.statsStorage.getDailyStats();
-		return !!(dailyStats && Object.keys(dailyStats).length > 0);
+		const lastTotal =
+			await this.plugin.statsStorage.getLastTotalCharacterCount();
+		return (
+			(dailyStats && Object.keys(dailyStats).length > 0) ||
+			lastTotal !== null
+		);
 	}
 
 	private renderNoDataMessage(container: HTMLElement): void {
@@ -125,6 +130,13 @@ export class CountNovelView extends ItemView {
 		noDataContainer.createEl("p", {
 			text: "執筆を開始すると、ここに進捗が表示されます。",
 			cls: "count-novels-no-data-subtitle",
+		});
+		new Setting(noDataContainer).addButton((btn) => {
+			btn.setButtonText("ビューの更新");
+			btn.setCta();
+			btn.onClick(() => {
+				this.plugin.handleManualDataCollection();
+			});
 		});
 	}
 
