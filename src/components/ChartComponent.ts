@@ -128,8 +128,8 @@ export class ChartComponent {
 		};
 	}
 
-	private createChartPlugins(colors: any, averageValue: number) {
-		return {
+	private createChartPlugins(colors: any, averageValue: number | null) {
+		const plugins: any = {
 			legend: {
 				display: false,
 			},
@@ -147,7 +147,10 @@ export class ChartComponent {
 					},
 				},
 			},
-			annotation: {
+		};
+
+		if (averageValue !== null) {
+			plugins.annotation = {
 				annotations: {
 					averageLine: {
 						type: "line" as const,
@@ -165,8 +168,10 @@ export class ChartComponent {
 						},
 					},
 				},
-			},
-		};
+			};
+		}
+
+		return plugins;
 	}
 
 	private createChartScales(
@@ -289,7 +294,9 @@ export class ChartComponent {
 		};
 	}
 
-	private calculateAverageFromChartData(chartData: ChartData<"bar">): number {
+	private calculateAverageFromChartData(
+		chartData: ChartData<"bar">
+	): number | null {
 		let totalValue = 0;
 		let count = 0;
 
@@ -302,7 +309,7 @@ export class ChartComponent {
 			});
 		});
 
-		return count > 0 ? totalValue / count : 0;
+		return count > 0 ? totalValue / count : null;
 	}
 
 	private getValueRangeFromChartData(chartData: ChartData<"bar">) {
