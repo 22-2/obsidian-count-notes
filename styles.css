@@ -3,9 +3,17 @@
 /* メインコンテナ */
 .count-novels-main {
 	padding: var(--size-4-2);
+	width: 100%;
+	height: 100%;
+	overflow-y: auto;
+}
+
+/* メインコンテナの直下要素を中央揃えにする */
+.count-novels-main > * {
 	max-width: 800px;
 	width: 100%;
-	margin: 0 auto;
+	margin-left: auto;
+	margin-right: auto;
 }
 
 /* ヘッダー */
