@@ -1,18 +1,21 @@
-import { db } from "../services/db";
+import { deleteDB } from "idb";
+import { closeDB } from "../services/db";
 import { StatsStorage } from "../services/statsStorage";
+
+const DB_NAME = "obsidian-count-novels-db";
 
 describe("StatsStorage", () => {
 	let statsStorage: StatsStorage;
 
 	beforeEach(async () => {
+		await closeDB();
+		await deleteDB(DB_NAME);
 		statsStorage = new StatsStorage();
-		await db.delete();
-		await db.open();
 	});
 
 	afterEach(async () => {
-		await db.delete();
-		await db.close();
+		await closeDB();
+		await deleteDB(DB_NAME);
 	});
 
 	describe("Daily Stats", () => {

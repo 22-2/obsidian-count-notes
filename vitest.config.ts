@@ -6,9 +6,6 @@ export default defineConfig({
 		globals: true,
 		environment: "node",
 		setupFiles: ["fake-indexeddb/auto"],
-		deps: {
-			moduleDirectories: ["dexie"],
-		},
 		exclude: ["e2e/**", "node_modules/**"],
 	},
 	resolve: {

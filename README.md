@@ -70,7 +70,7 @@ Count Novels automatically tracks how many characters you write inside Obsidian.
 }
 ```
 
-### `obsidian-count-novels-db` (Dexie)
+### `obsidian-count-novels-db` (IndexedDB via idb)
 
 | Table          | Key                               | Value                                  | Notes |
 |----------------|-----------------------------------|----------------------------------------|-------|
@@ -87,7 +87,7 @@ Keeping the `HH` section zero-padded is critical—`PeriodDataService` and the V
 | `pnpm dev`          | Builds once and watches via `esbuild.config.mts`. |
 | `pnpm build`        | Production build (minified). |
 | `pnpm check-types`  | Runs `tsc --noEmit` against `src/`. |
-| `pnpm test`         | Executes Vitest (unit tests + Dexie-backed suites). |
+| `pnpm test`         | Executes Vitest (unit tests + idb-backed suites). |
 | `pnpm test:watch`   | Watches with Vitest. |
 | `pnpm test:coverage`| Collects coverage. |
 | `pnpm test:e2e`     | Playwright-based Obsidian E2E tests (needs repo CI permissions; local runs may be blocked per `AGENTS.md`). |
@@ -95,7 +95,7 @@ Keeping the `HH` section zero-padded is critical—`PeriodDataService` and the V
 ### Key Modules
 - `src/main.ts` – plugin entrypoint, service wiring, status bar setup.
 - `src/services/dataCollection.ts` – tag filtering, counting, diff computation, and stats persistence.
-- `src/services/statsStorage.ts` – Dexie helpers for daily/hourly stats and the rolling total.
+- `src/services/statsStorage.ts` – idb helpers for daily/hourly stats and the rolling total.
 - `src/services/periodDataService.ts` – aggregates data into view-friendly stats + chart series.
 - `src/CountNovelView.ts` – Obsidian view that composes tabs, stats, and chart components.
 

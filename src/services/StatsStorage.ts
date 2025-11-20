@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { getDB } from "./db";
 import type { DailyStats, HourlyStats } from "../schemas";
 
 const LAST_TOTAL_CHARACTER_COUNT_KEY = "lastTotalCharacterCount";
@@ -10,7 +10,8 @@ export class StatsStorage {
 	 * @returns A promise that resolves to the daily stats.
 	 */
 	async getDailyStats(): Promise<DailyStats> {
-		const statsArray = await db.dailyStats.toArray();
+		const db = await getDB();
+		const statsArray = await db.getAll("dailyStats");
 		const stats: DailyStats = {};
 		for (const item of statsArray) {
 			stats[item.date] = item.count;
@@ -28,10 +29,9 @@ export class StatsStorage {
 		startDate: string, // YYYY-MM-DD
 		endDate: string // YYYY-MM-DD
 	): Promise<DailyStats> {
-		const statsArray = await db.dailyStats
-			.where("date")
-			.between(startDate, endDate, true, true)
-			.toArray();
+		const db = await getDB();
+		const range = IDBKeyRange.bound(startDate, endDate);
+		const statsArray = await db.getAll("dailyStats", range);
 		const stats: DailyStats = {};
 		for (const item of statsArray) {
 			stats[item.date] = item.count;
@@ -45,7 +45,8 @@ export class StatsStorage {
 	 * @returns A promise that resolves to the hourly stats.
 	 */
 	async getHourlyStats(): Promise<HourlyStats> {
-		const statsArray = await db.hourlyStats.toArray();
+		const db = await getDB();
+		const statsArray = await db.getAll("hourlyStats");
 		const stats: HourlyStats = {};
 		for (const item of statsArray) {
 			stats[item.datetime] = item.count;
@@ -70,10 +71,11 @@ export class StatsStorage {
 
 		const startDatetime = `${startDate}-${formattedStartHour}`;
 		const endDatetime = `${endDate}-${formattedEndHour}`;
-		const statsArray = await db.hourlyStats
-			.where("datetime")
-			.between(startDatetime, endDatetime, true, true)
-			.toArray();
+		
+		const db = await getDB();
+		const range = IDBKeyRange.bound(startDatetime, endDatetime);
+		const statsArray = await db.getAll("hourlyStats", range);
+		
 		const stats: HourlyStats = {};
 		for (const item of statsArray) {
 			stats[item.datetime] = item.count;
@@ -86,7 +88,8 @@ export class StatsStorage {
 	 * @returns A promise that resolves to the last total character count.
 	 */
 	async getLastTotalCharacterCount(): Promise<number> {
-		const result = await db.misc.get(LAST_TOTAL_CHARACTER_COUNT_KEY);
+		const db = await getDB();
+		const result = await db.get("misc", LAST_TOTAL_CHARACTER_COUNT_KEY);
 		return result ? (result.value as number) : 0;
 	}
 
@@ -95,7 +98,8 @@ export class StatsStorage {
 	 * @param count - The last total character count.
 	 */
 	async saveLastTotalCharacterCount(count: number): Promise<void> {
-		await db.misc.put({
+		const db = await getDB();
+		await db.put("misc", {
 			key: LAST_TOTAL_CHARACTER_COUNT_KEY,
 			value: count,
 		});
@@ -107,11 +111,13 @@ export class StatsStorage {
 	 * @param characterDiff - The character difference to add.
 	 */
 	async updateDailyStats(date: string, characterDiff: number): Promise<void> {
-		await db.transaction("rw", db.dailyStats, async () => {
-			const existing = await db.dailyStats.get(date);
-			const newCount = (existing?.count || 0) + characterDiff;
-			await db.dailyStats.put({ date, count: newCount });
-		});
+		const db = await getDB();
+		const tx = db.transaction("dailyStats", "readwrite");
+		const store = tx.objectStore("dailyStats");
+		const existing = await store.get(date);
+		const newCount = (existing?.count || 0) + characterDiff;
+		await store.put({ date, count: newCount });
+		await tx.done;
 	}
 
 	/**
@@ -127,18 +133,21 @@ export class StatsStorage {
 		const hourToUse = hour !== undefined ? hour : new Date().getHours();
 		const timeSlotKey = `${date}-${String(hourToUse).padStart(2, '0')}`;
 
-		await db.transaction("rw", db.hourlyStats, async () => {
-			const existing = await db.hourlyStats.get(timeSlotKey);
-			const newCount = (existing?.count || 0) + characterDiff;
-			await db.hourlyStats.put({ datetime: timeSlotKey, count: newCount });
-		});
+		const db = await getDB();
+		const tx = db.transaction("hourlyStats", "readwrite");
+		const store = tx.objectStore("hourlyStats");
+		const existing = await store.get(timeSlotKey);
+		const newCount = (existing?.count || 0) + characterDiff;
+		await store.put({ datetime: timeSlotKey, count: newCount });
+		await tx.done;
 	}
 
 	/**
 	 * Clears all daily stats (for testing).
 	 */
 	async clearDailyStats(): Promise<void> {
-		await db.dailyStats.clear();
+		const db = await getDB();
+		await db.clear("dailyStats");
 	}
 
 	/**
@@ -147,6 +156,7 @@ export class StatsStorage {
 	 * @param count - The character count.
 	 */
 	async saveDailyStats(date: string, count: number): Promise<void> {
-		await db.dailyStats.put({ date, count });
+		const db = await getDB();
+		await db.put("dailyStats", { date, count });
 	}
 }

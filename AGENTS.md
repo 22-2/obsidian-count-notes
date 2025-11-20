@@ -37,7 +37,7 @@ Obsidianで小説などを執筆するユーザー向けに、日々の執筆量
     2.  プラグインが保存している**前回の合計文字数**と比較し、差分を出す。
     3.  その**差分**を「その日の執筆量」として、日付と共に記録する。また、時間ごとの執筆量も記録する。
     4.  現在の合計文字数を「前回の合計文字数」として保存し、次の集計に備える。
-*   **データ保存**: 集計した日々の執筆量は、IndexedDB (Dexie.js) に保存する。プラグイン設定とビューの状態はObsidian標準の `data.json` に保存する。
+*   **データ保存**: 集計した日々の執筆量は、IndexedDB (idb) に保存する。プラグイン設定とビューの状態はObsidian標準の `data.json` に保存する。
 
 #### 2.3. 統計ビュー
 *   Obsidianのサイドバーにアイコン (`chart-column-big`) を追加し、クリックすると専用のビュー（ペイン）が開く。
@@ -65,7 +65,7 @@ Obsidianで小説などを執筆するユーザー向けに、日々の執筆量
 *   **UIフレームワーク**: **使用しない。** Obsidian標準のDOM API (`createEl`など) でUIを構築する。UIコンポーネントとして `TabComponent`, `StatsComponent`, `ChartComponent` を使用。
 *   **データ保存**:
     *   設定 (`settings`) と最後のビュー状態 (`lastViewState`) は、Obsidian標準の `saveData` / `loadData` を使用し、プラグインの `data.json` に保存する。
-    *   日次統計 (`DailyStats`)、時間ごとの統計 (`HourlyStats`)、前回の合計文字数 (`lastTotalCharacterCount`) は、IndexedDB (Dexie.js) を使用して `obsidian-count-novels-db` というデータベースに保存する。
+    *   日次統計 (`DailyStats`)、時間ごとの統計 (`HourlyStats`)、前回の合計文字数 (`lastTotalCharacterCount`) は、IndexedDB (idb) を使用して `obsidian-count-novels-db` というデータベースに保存する。
 *   **グラフ描画**: **Chart.js** (chartjs-plugin-annotation を含む)
 *   **日付操作**: Moment.js (Obsidianに同梱されているものを利用)
 
@@ -111,7 +111,7 @@ Obsidianで小説などを執筆するユーザー向けに、日々の執筆量
 1.  **Step 1: 基礎ロジックの実装**
     *   プラグインの雛形を作成する。
     *   設定画面を作り、`trackingTag` と `logLevel` を保存できるようにする。
-    *   IndexedDB (Dexie.js) を用いたデータ永続化層 (`StatsStorage`, `db.ts`) を実装する。
+    *   IndexedDB (idb) を用いたデータ永続化層 (`StatsStorage`, `db.ts`) を実装する。
     *   指定タグのファイルの合計文字数を計算し、差分を日次・時間別統計、および `lastTotalCharacterCount` としてIndexedDBに記録するコアロジック (`DataCollectionService`) を完成させる。
 
 2.  **Step 2: UIとグラフの実装**

@@ -1,4 +1,4 @@
-import Dexie, { type Table } from "dexie";
+import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 
 export interface DailyStat {
 	date: string; // YYYY-MM-DD
@@ -15,19 +15,49 @@ export interface Misc {
 	value: any;
 }
 
-class CountNovelsDB extends Dexie {
-	dailyStats!: Table<DailyStat>;
-	hourlyStats!: Table<HourlyStat>;
-	misc!: Table<Misc>;
-
-	constructor() {
-		super("obsidian-count-novels-db");
-		this.version(1).stores({
-			dailyStats: "&date", // 'date' is the primary key
-			hourlyStats: "&datetime", // 'datetime' is the primary key
-			misc: "&key", // 'key' is the primary key
-		});
-	}
+export interface CountNovelsDBSchema extends DBSchema {
+	dailyStats: {
+		key: string;
+		value: DailyStat;
+	};
+	hourlyStats: {
+		key: string;
+		value: HourlyStat;
+	};
+	misc: {
+		key: string;
+		value: Misc;
+	};
 }
 
-export const db = new CountNovelsDB();
+const DB_NAME = "obsidian-count-novels-db";
+const DB_VERSION = 1;
+
+let dbPromise: Promise<IDBPDatabase<CountNovelsDBSchema>> | null = null;
+
+export function getDB(): Promise<IDBPDatabase<CountNovelsDBSchema>> {
+	if (!dbPromise) {
+		dbPromise = openDB<CountNovelsDBSchema>(DB_NAME, DB_VERSION, {
+			upgrade(db) {
+				if (!db.objectStoreNames.contains("dailyStats")) {
+					db.createObjectStore("dailyStats", { keyPath: "date" });
+				}
+				if (!db.objectStoreNames.contains("hourlyStats")) {
+					db.createObjectStore("hourlyStats", { keyPath: "datetime" });
+				}
+				if (!db.objectStoreNames.contains("misc")) {
+					db.createObjectStore("misc", { keyPath: "key" });
+				}
+			},
+		});
+	}
+	return dbPromise;
+}
+
+export async function closeDB() {
+	if (dbPromise) {
+		const db = await dbPromise;
+		db.close();
+		dbPromise = null;
+	}
+}
