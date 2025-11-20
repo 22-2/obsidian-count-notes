@@ -223,18 +223,13 @@ export class ChartComponent {
 	}
 
 	private createYAxisConfig(colors: any, chartData: ChartData<"bar">) {
-		const { minValue, maxValue, maxAbsValue } =
-			this.getValueRangeFromChartData(chartData);
-		const stepSize = this.calculateStepSize(maxAbsValue);
-		const suggestedMin = minValue < 0 ? minValue - stepSize : 0;
-		const suggestedMax = maxValue > 0 ? maxValue + stepSize : stepSize;
+		const { minValue } = this.getValueRangeFromChartData(chartData);
 
 		return {
 			ticks: {
 				color: colors.textSecondary,
 				font: { size: 11 },
 				maxTicksLimit: 5,
-				stepSize,
 				callback: function (value: any) {
 					if (typeof value === "number") {
 						if (value === 0) return "0";
@@ -253,8 +248,7 @@ export class ChartComponent {
 					this.isZeroTick(ctx) ? 2 : 1,
 			},
 			beginAtZero: minValue >= 0,
-			suggestedMin,
-			suggestedMax,
+			grace: "5%",
 		};
 	}
 
@@ -329,24 +323,7 @@ export class ChartComponent {
 			maxValue = 0;
 		}
 
-		const maxAbsValue = Math.max(Math.abs(minValue), Math.abs(maxValue));
-		return { minValue, maxValue, maxAbsValue };
-	}
-
-	private calculateStepSize(maxValue: number): number {
-		if (maxValue === 0) return 1000;
-
-		const rawStep = maxValue / 5;
-		const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
-		const normalized = rawStep / magnitude;
-
-		let niceStep;
-		if (normalized <= 1) niceStep = 1;
-		else if (normalized <= 2) niceStep = 2;
-		else if (normalized <= 5) niceStep = 5;
-		else niceStep = 10;
-
-		return niceStep * magnitude;
+		return { minValue, maxValue };
 	}
 
 	private getThemeColors() {
