@@ -29,6 +29,7 @@ export class ChartComponent {
 
 			const colors = this.getThemeColors();
 			const averageValue = this.calculateAverage(ys);
+			const hasNonZeroData = ys.some((v) => typeof v === "number" && v !== 0);
 
 			const opts: uPlot.Options = {
 				width: this.container.clientWidth || 800,
@@ -72,6 +73,7 @@ export class ChartComponent {
 				hooks: {
 					draw: [
 						(u) => {
+							if (!hasNonZeroData) return;
 							const ctx = u.ctx;
 							const y = u.valToPos(averageValue, "y", true);
 							const x0 = u.valToPos(u.scales.x.min!, "x", true);
