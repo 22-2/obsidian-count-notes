@@ -85,12 +85,12 @@ export class StatsStorage {
 
 	/**
 	 * Gets the last total character count.
-	 * @returns A promise that resolves to the last total character count.
+	 * @returns A promise that resolves to the last total character count, or null if not set.
 	 */
-	async getLastTotalCharacterCount(): Promise<number> {
+	async getLastTotalCharacterCount(): Promise<number | null> {
 		const db = await getDB();
 		const result = await db.get("misc", LAST_TOTAL_CHARACTER_COUNT_KEY);
-		return result ? (result.value as number) : 0;
+		return result ? (result.value as number) : null;
 	}
 
 	/**

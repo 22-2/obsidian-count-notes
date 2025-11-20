@@ -107,9 +107,9 @@ describe("StatsStorage", () => {
 			expect(count).toBe(12345);
 		});
 
-		it("should return 0 if no count is saved", async () => {
+		it("should return null if no count is saved", async () => {
 			const count = await statsStorage.getLastTotalCharacterCount();
-			expect(count).toBe(0);
+			expect(count).toBeNull();
 		});
 	});
 });

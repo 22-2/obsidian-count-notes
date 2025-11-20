@@ -177,6 +177,15 @@ export class DataCollectionService {
 			const currentTotal = await this.calculateTotalCharacterCount();
 			const previousTotal =
 				await this.statsStorage.getLastTotalCharacterCount();
+
+			if (previousTotal === null) {
+				logger.log(
+					`Count Novels: First run detected. Initializing total count to ${currentTotal}. No stats recorded.`
+				);
+				await this.statsStorage.saveLastTotalCharacterCount(currentTotal);
+				return;
+			}
+
 			const difference = currentTotal - previousTotal;
 
 			logger.log(

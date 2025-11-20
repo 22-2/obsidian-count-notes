@@ -125,6 +125,25 @@ describe("DataCollectionService.collectData", () => {
 		expect(statsStorage.updateHourlyStats).not.toHaveBeenCalled();
 		expect(refreshSpy).not.toHaveBeenCalled();
 	});
+
+	test("handles first run (no previous stats)", async () => {
+		const { service, statsStorage } = createService();
+		statsStorage.getLastTotalCharacterCount.mockResolvedValueOnce(null);
+		const calcSpy = vi
+			.spyOn(service as any, "calculateTotalCharacterCount")
+			.mockResolvedValueOnce(1500);
+		const refreshSpy = vi
+			.spyOn(service as any, "refreshViews")
+			.mockImplementation(() => undefined);
+
+		await service.collectData();
+
+		expect(calcSpy).toHaveBeenCalled();
+		expect(statsStorage.saveLastTotalCharacterCount).toHaveBeenCalledWith(1500);
+		expect(statsStorage.updateDailyStats).not.toHaveBeenCalled();
+		expect(statsStorage.updateHourlyStats).not.toHaveBeenCalled();
+		expect(refreshSpy).not.toHaveBeenCalled();
+	});
 });
 
 describe("DataCollectionService tag discovery", () => {
