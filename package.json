@@ -49,6 +49,7 @@
 		"idb-keyval": "^6.2.2",
 		"loglevel": "^1.9.2",
 		"obsidian-e2e-toolkit": "git+https://github.com/22-2/obsidian-e2e-toolkit.git",
+		"uplot": "^1.6.32",
 		"valibot": "^1.1.0"
 	}
 }

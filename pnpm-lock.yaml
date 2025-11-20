@@ -29,6 +29,9 @@ importers:
       obsidian-e2e-toolkit:
         specifier: git+https://github.com/22-2/obsidian-e2e-toolkit.git
         version: git+https://github.com/22-2/obsidian-e2e-toolkit.git#647bd247bdaf8b8d7252d32df4388e41cce22beb(@playwright/test@1.56.1)(playwright@1.56.1)
+      uplot:
+        specifier: ^1.6.32
+        version: 1.6.32
       valibot:
         specifier: ^1.1.0
         version: 1.1.0(typescript@5.9.3)
@@ -2259,6 +2262,9 @@ packages:
   universalify@0.1.2:
     resolution: {integrity: sha512-rBJeI5CXAlmy1pV+617WB9J63U6XcazHHF2f2dbJix4XzpUF0RS3Zbj0FGIOCAva5P/d/GBOYaACQ1w+0azUkg==}
     engines: {node: '>= 4.0.0'}
+
+  uplot@1.6.32:
+    resolution: {integrity: sha512-KIMVnG68zvu5XXUbC4LQEPnhwOxBuLyW1AHtpm6IKTXImkbLgkMy+jabjLgSLMasNuGGzQm/ep3tOkyTxpiQIw==}
 
   url@0.11.4:
     resolution: {integrity: sha512-oCwdVC7mTuWiPyjLUz/COz5TLk6wgp0RCsN+wHZ2Ekneac9w8uuV0njcbbie2ME+Vs+d6duwmYuR3HgQXs1fOg==}
@@ -4557,6 +4563,8 @@ snapshots:
   unicorn-magic@0.3.0: {}
 
   universalify@0.1.2: {}
+
+  uplot@1.6.32: {}
 
   url@0.11.4:
     dependencies:
