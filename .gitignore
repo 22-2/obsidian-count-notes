@@ -72,3 +72,4 @@ repomix-output.md
 # If you have asset images in the repo, keep this commented.
 # *.png
 coverage/
+esbuild-meta.json
