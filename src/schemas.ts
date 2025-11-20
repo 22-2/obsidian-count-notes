@@ -1,78 +1,119 @@
-/**
- * 期間タイプ
- */
-export type PeriodType = "day" | "week" | "month" | "year";
+import * as v from "valibot";
 
 /**
- * 期間設定
+ * 期間タイプのスキーマ
  */
-export interface PeriodConfig {
-	type: PeriodType;
-	label: string;
-	shortLabel: string;
-}
+export const PeriodTypeSchema = v.picklist(["day", "week", "month", "year"]);
 
 /**
- * 期間統計
+ * 期間設定のスキーマ
  */
-export interface PeriodStats {
-	total: number;
-	average: number;
-	streak: number;
-	periodLabel: string;
-}
+export const PeriodConfigSchema = v.object({
+	type: PeriodTypeSchema,
+	label: v.string(),
+	shortLabel: v.string(),
+});
 
 /**
- * チャートデータポイント
+ * 期間統計のスキーマ
  */
-export interface ChartDataPoint {
-	label: string;
-	value: number;
-	date: string;
-}
+export const PeriodStatsSchema = v.object({
+	total: v.number(),
+	average: v.number(),
+	streak: v.number(),
+	periodLabel: v.string(),
+});
 
 /**
- * 設定
+ * チャートデータポイントのスキーマ
  */
-export interface CountNovelsSettings {
-	logLevel: "debug" | "info" | "warn" | "error" | "silent";
-	trackingTag: string;
-	excludedFolders: string[];
-}
+export const ChartDataPointSchema = v.object({
+	label: v.string(),
+	value: v.number(),
+	date: v.string(),
+});
 
 /**
- * ビュー状態
+ * 設定のスキーマ
  */
-export interface ViewState {
-	period: PeriodType;
-}
+export const CountNovelsSettingsSchema = v.object({
+	logLevel: v.picklist(["debug", "info", "warn", "error", "silent"]),
+	trackingTag: v.pipe(v.string(), v.minLength(1)),
+	excludedFolders: v.optional(
+		v.array(v.pipe(v.string(), v.minLength(1))),
+		[]
+	),
+});
 
 /**
- * Count Novel ビュー状態
+ * 日付文字列のバリデーション（YYYY-MM-DD形式）
  */
-export interface CountNovelViewState {
-	period: PeriodType;
-}
+export const DateStringSchema = v.pipe(
+	v.string(),
+	v.regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
+);
 
 /**
- * 時間単位の統計（YYYY-MM-DD-HH形式、HHは00-23）
+ * ビュー状態のスキーマ
  */
-export type HourlyStats = Record<string, number>;
+export const ViewStateSchema = v.object({
+	period: PeriodTypeSchema,
+});
 
 /**
- * 日次統計
+ * Count Novel ビュー状態のスキーマ
  */
-export type DailyStats = Record<string, number>;
+export const CountNovelViewStateSchema = v.object({
+	period: PeriodTypeSchema,
+});
 
 /**
- * プラグインデータ（data.json）
+ * 時間単位の統計のスキーマ（YYYY-MM-DD-HH形式、HHは00-23）
+ */
+export const HourlyStatsSchema = v.record(
+	v.pipe(
+		v.string(),
+		v.regex(
+			/^\d{4}-\d{2}-\d{2}-\d{2}$/,
+			"Time slot must be in YYYY-MM-DD-HH format (HH: 00-23)"
+		)
+	),
+	v.pipe(v.number(), v.integer())
+);
+
+/**
+ * 日次統計のスキーマ
+ */
+export const DailyStatsSchema = v.record(
+	DateStringSchema,
+	v.pipe(v.number(), v.integer())
+);
+
+/**
+ * プラグインデータ（data.json）のスキーマ
  * 設定とビューの状態のみを保持
  */
-export interface PluginData {
-	settings: CountNovelsSettings;
-	lastViewState?: ViewState;
-	lastCollectedAt?: string;
-}
+export const PluginDataSchema = v.object({
+	settings: CountNovelsSettingsSchema,
+	lastViewState: v.optional(ViewStateSchema),
+	lastCollectedAt: v.optional(v.string()),
+});
+
+// 型定義（valibotスキーマから自動生成）
+export type PeriodType = v.InferOutput<typeof PeriodTypeSchema>;
+export type PeriodConfig = v.InferOutput<typeof PeriodConfigSchema>;
+export type PeriodStats = v.InferOutput<typeof PeriodStatsSchema>;
+export type ChartDataPoint = v.InferOutput<typeof ChartDataPointSchema>;
+export type CountNovelsSettings = v.InferOutput<
+	typeof CountNovelsSettingsSchema
+>;
+export type ViewState = v.InferOutput<typeof ViewStateSchema>;
+export type CountNovelViewState = v.InferOutput<
+	typeof CountNovelViewStateSchema
+>;
+export type DailyStats = v.InferOutput<typeof DailyStatsSchema>;
+export type HourlyStats = v.InferOutput<typeof HourlyStatsSchema>;
+export type PluginData = v.InferOutput<typeof PluginDataSchema>;
 
 /**
  * 期間設定の定数
@@ -107,5 +148,29 @@ export const DEFAULT_SETTINGS: CountNovelsSettings = {
 	logLevel: "debug",
 	trackingTag: "novel",
 	excludedFolders: [],
+};
+
+/**
+ * 日付バリデーション用のヘルパー関数
+ */
+export const validateDateString = (date: string): boolean => {
+	return v.safeParse(DateStringSchema, date).success;
+};
+
+/**
+ * 期間タイプバリデーション用のヘルパー関数
+ */
+export const validatePeriodType = (period: string): period is PeriodType => {
+	return v.safeParse(PeriodTypeSchema, period).success;
+};
+
+/**
+ * 設定バリデーション用のヘルパー関数
+ */
+export const validateSettings = (
+	settings: unknown
+): CountNovelsSettings | null => {
+	const result = v.safeParse(CountNovelsSettingsSchema, settings);
+	return result.success ? result.output : null;
 };
 

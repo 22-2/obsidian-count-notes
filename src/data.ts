@@ -1,5 +1,6 @@
+import * as v from "valibot";
 import type CountNovelsPlugin from "./main";
-import { type PeriodType, type PluginData } from "./schemas";
+import { PluginDataSchema, type PeriodType, type PluginData } from "./schemas";
 
 /**
  * データストレージクラス
@@ -49,23 +50,18 @@ export class DataStorage {
 	private async validateAndLoadData(
 		loadedData: unknown
 	): Promise<PluginData> {
-		// Zod validation removed.
-		// We assume the loaded data matches the expected structure or is compatible.
-		// We merge it with initial data to ensure all required fields exist.
-		const initialData = this.createInitialData();
-		
-		// Simple shallow merge for the root object
-		this.data = { ...initialData, ...(loadedData as Partial<PluginData>) };
+		const validationResult = v.safeParse(PluginDataSchema, loadedData);
 
-		// Ensure settings are merged correctly if they exist
-		if ((loadedData as any).settings) {
-			this.data.settings = { 
-				...initialData.settings, 
-				...(loadedData as any).settings 
-			};
+		if (validationResult.success) {
+			this.data = validationResult.output;
+			return this.data;
 		}
 
-		return this.data;
+		console.warn(
+			"Count Novels: Data validation failed:",
+			validationResult.issues
+		);
+		return this.initializeData();
 	}
 
 	/**
