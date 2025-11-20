@@ -6,6 +6,7 @@ import process from "process";
 
 import { copyPlugin } from "./copyPlugin.mts";
 import manifest from "./manifest.json";
+import { writeFileSync } from "fs";
 dotenv.config();
 
 const banner = `/*
@@ -96,12 +97,18 @@ const context = await esbuild.context({
 	logLevel: "info",
 	minify: prod,
 	sourcemap: prod ? false : "inline",
+	metafile: prod,
 	treeShaking: true,
 	outfile: "main.js",
 });
 
 if (prod) {
-	await context.rebuild();
+	const result = await context.rebuild();
+	writeFileSync(
+		"esbuild-meta.json",
+		JSON.stringify(result.metafile)
+	 );
+	await context.dispose();
 	process.exit(0);
 } else {
 	await context.watch();
