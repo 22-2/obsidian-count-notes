@@ -106,6 +106,7 @@ export class ChartComponent {
 			type: "bar",
 			data: chartData,
 			options: {
+				animation: false,
 				responsive: true,
 				maintainAspectRatio: false,
 				layout: {
