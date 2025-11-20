@@ -49,7 +49,7 @@ describe("DataStorage", () => {
 		expect(data).toEqual(persisted);
 	});
 
-	test("loadData reinitializes when stored data is invalid", async () => {
+	test("loadData merges with defaults when stored data is partial/invalid", async () => {
 		const { plugin, storage } = createStorage();
 		const warnSpy = vi
 			.spyOn(console, "warn")
@@ -58,9 +58,10 @@ describe("DataStorage", () => {
 
 		const data = await storage.loadData();
 
-		expect(warnSpy).toHaveBeenCalled();
-		expect(plugin.saveData).toHaveBeenCalledTimes(1);
+		expect(warnSpy).not.toHaveBeenCalled();
+		expect(plugin.saveData).not.toHaveBeenCalled();
 		expect(data.lastViewState?.period).toBe("month");
+		expect((data as any).unexpected).toBe(true);
 
 		warnSpy.mockRestore();
 	});

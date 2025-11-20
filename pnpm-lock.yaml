@@ -29,9 +29,6 @@ importers:
       obsidian-e2e-toolkit:
         specifier: git+https://github.com/22-2/obsidian-e2e-toolkit.git
         version: git+https://github.com/22-2/obsidian-e2e-toolkit.git#647bd247bdaf8b8d7252d32df4388e41cce22beb(@playwright/test@1.56.1)(playwright@1.56.1)
-      zod:
-        specifier: ^4.1.12
-        version: 4.1.12
     devDependencies:
       '@biomejs/biome':
         specifier: 2.3.6
@@ -2401,9 +2398,6 @@ packages:
     resolution: {integrity: sha512-4LCcse/U2MHZ63HAJVE+v71o7yOdIe4cZ70Wpf8D/IyjDKYQLV5GD46B+hSTjJsvV5PztjvHoU580EftxjDZFQ==}
     engines: {node: '>=12.20'}
 
-  zod@4.1.12:
-    resolution: {integrity: sha512-JInaHOamG8pt5+Ey8kGmdcAcg3OL9reK8ltczgHTAwNhMys/6ThXHityHxVV2p3fkw/c+MAvBHFVYHFZDmjMCQ==}
-
 snapshots:
 
   '@antfu/install-pkg@1.1.0':
@@ -4670,5 +4664,3 @@ snapshots:
       fd-slicer: 1.1.0
 
   yocto-queue@1.2.2: {}
-
-  zod@4.1.12: {}

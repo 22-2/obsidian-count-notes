@@ -1,110 +1,81 @@
-import { z } from "zod";
-
 /**
- * 期間タイプのzodスキーマ
+ * 期間タイプ
  */
-export const PeriodTypeSchema = z.enum(["day", "week", "month", "year"]);
+export type PeriodType = "day" | "week" | "month" | "year";
 
 /**
- * 期間設定のzodスキーマ
+ * 期間設定
  */
-export const PeriodConfigSchema = z.object({
-	type: PeriodTypeSchema,
-	label: z.string(),
-	shortLabel: z.string(),
-});
+export interface PeriodConfig {
+	type: PeriodType;
+	label: string;
+	shortLabel: string;
+}
 
 /**
- * 期間統計のzodスキーマ
+ * 期間統計
  */
-export const PeriodStatsSchema = z.object({
-	total: z.number(),
-	average: z.number(),
-	streak: z.number(),
-	periodLabel: z.string(),
-});
+export interface PeriodStats {
+	total: number;
+	average: number;
+	streak: number;
+	periodLabel: string;
+}
 
 /**
- * チャートデータポイントのzodスキーマ
+ * チャートデータポイント
  */
-export const ChartDataPointSchema = z.object({
-	label: z.string(),
-	value: z.number(),
-	date: z.string(),
-});
+export interface ChartDataPoint {
+	label: string;
+	value: number;
+	date: string;
+}
 
 /**
- * 設定のzodスキーマ
+ * 設定
  */
-export const CountNovelsSettingsSchema = z.object({
-	logLevel: z.enum(["debug", "info", "warn", "error", "silent"]),
-	trackingTag: z.string().min(1),
-	excludedFolders: z.array(z.string().min(1)).default([]),
-});
+export interface CountNovelsSettings {
+	logLevel: "debug" | "info" | "warn" | "error" | "silent";
+	trackingTag: string;
+	excludedFolders: string[];
+}
 
 /**
- * 日付文字列のバリデーション（YYYY-MM-DD形式）
+ * ビュー状態
  */
-export const DateStringSchema = z
-	.string()
-	.regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format");
+export interface ViewState {
+	period: PeriodType;
+}
 
 /**
- * ビュー状態のzodスキーマ
+ * Count Novel ビュー状態
  */
-export const ViewStateSchema = z.object({
-	period: PeriodTypeSchema,
-});
+export interface CountNovelViewState {
+	period: PeriodType;
+}
 
 /**
- * Count Novel ビュー状態のzodスキーマ
+ * 時間単位の統計（YYYY-MM-DD-HH形式、HHは00-23）
  */
-export const CountNovelViewStateSchema = z.object({
-	period: PeriodTypeSchema,
-});
+export type HourlyStats = Record<string, number>;
 
 /**
- * 時間単位の統計のzodスキーマ（YYYY-MM-DD-HH形式、HHは00-23）
+ * 日次統計
  */
-export const HourlyStatsSchema = z.record(
-	z
-		.string()
-		.regex(
-			/^\d{4}-\d{2}-\d{2}-\d{2}$/,
-			"Time slot must be in YYYY-MM-DD-HH format (HH: 00-23)"
-		),
-	z.number().int()
-);
+export type DailyStats = Record<string, number>;
 
 /**
- * 日次統計のzodスキーマ
- */
-export const DailyStatsSchema = z.record(DateStringSchema, z.number().int());
-
-/**
- * プラグインデータ（data.json）のzodスキーマ
+ * プラグインデータ（data.json）
  * 設定とビューの状態のみを保持
  */
-export const PluginDataSchema = z.object({
-	settings: CountNovelsSettingsSchema,
-	lastViewState: ViewStateSchema.optional(),
-	lastCollectedAt: z.string().optional(),
-});
-
-// 型定義（zodスキーマから自動生成）
-export type PeriodType = z.infer<typeof PeriodTypeSchema>;
-export type PeriodConfig = z.infer<typeof PeriodConfigSchema>;
-export type PeriodStats = z.infer<typeof PeriodStatsSchema>;
-export type ChartDataPoint = z.infer<typeof ChartDataPointSchema>;
-export type CountNovelsSettings = z.infer<typeof CountNovelsSettingsSchema>;
-export type ViewState = z.infer<typeof ViewStateSchema>;
-export type CountNovelViewState = z.infer<typeof CountNovelViewStateSchema>;
-export type DailyStats = z.infer<typeof DailyStatsSchema>;
-export type HourlyStats = z.infer<typeof HourlyStatsSchema>;
-export type PluginData = z.infer<typeof PluginDataSchema>;
+export interface PluginData {
+	settings: CountNovelsSettings;
+	lastViewState?: ViewState;
+	lastCollectedAt?: string;
+}
 
 /**
- * 期間設定の定数（Zodスキーマでバリデーション済み）
+ * 期間設定の定数
  */
 export const PERIOD_CONFIGS: Record<PeriodType, PeriodConfig> = {
 	day: {
@@ -130,7 +101,7 @@ export const PERIOD_CONFIGS: Record<PeriodType, PeriodConfig> = {
 };
 
 /**
- * デフォルト設定（Zodスキーマでバリデーション済み）
+ * デフォルト設定
  */
 export const DEFAULT_SETTINGS: CountNovelsSettings = {
 	logLevel: "debug",
@@ -138,26 +109,3 @@ export const DEFAULT_SETTINGS: CountNovelsSettings = {
 	excludedFolders: [],
 };
 
-/**
- * 日付バリデーション用のヘルパー関数
- */
-export const validateDateString = (date: string): boolean => {
-	return DateStringSchema.safeParse(date).success;
-};
-
-/**
- * 期間タイプバリデーション用のヘルパー関数
- */
-export const validatePeriodType = (period: string): period is PeriodType => {
-	return PeriodTypeSchema.safeParse(period).success;
-};
-
-/**
- * 設定バリデーション用のヘルパー関数
- */
-export const validateSettings = (
-	settings: unknown
-): CountNovelsSettings | null => {
-	const result = CountNovelsSettingsSchema.safeParse(settings);
-	return result.success ? result.data : null;
-};

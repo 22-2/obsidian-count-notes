@@ -1,5 +1,5 @@
 import type CountNovelsPlugin from "./main";
-import { PluginDataSchema, type PeriodType, type PluginData } from "./schemas";
+import { type PeriodType, type PluginData } from "./schemas";
 
 /**
  * データストレージクラス
@@ -49,18 +49,23 @@ export class DataStorage {
 	private async validateAndLoadData(
 		loadedData: unknown
 	): Promise<PluginData> {
-		const validationResult = PluginDataSchema.safeParse(loadedData);
+		// Zod validation removed.
+		// We assume the loaded data matches the expected structure or is compatible.
+		// We merge it with initial data to ensure all required fields exist.
+		const initialData = this.createInitialData();
+		
+		// Simple shallow merge for the root object
+		this.data = { ...initialData, ...(loadedData as Partial<PluginData>) };
 
-		if (validationResult.success) {
-			this.data = validationResult.data;
-			return this.data;
+		// Ensure settings are merged correctly if they exist
+		if ((loadedData as any).settings) {
+			this.data.settings = { 
+				...initialData.settings, 
+				...(loadedData as any).settings 
+			};
 		}
 
-		console.warn(
-			"Count Novels: Data validation failed:",
-			validationResult.error.issues
-		);
-		return this.initializeData();
+		return this.data;
 	}
 
 	/**
