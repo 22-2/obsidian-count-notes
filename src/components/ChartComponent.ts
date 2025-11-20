@@ -349,31 +349,19 @@ export class ChartComponent {
 	}
 
 	private getThemeColors() {
-		const isDarkTheme = document.body.classList.contains("theme-dark");
+		const style = getComputedStyle(document.body);
+		const getVar = (name: string) => style.getPropertyValue(name).trim();
 
-		const darkTheme = {
-			textPrimary: "#ffffff",
-			textSecondary: "#cccccc",
-			gridColor: "#444444",
-			zeroLineColor: "#e0e0e0",
-			tooltipBg: "rgba(0, 0, 0, 0.8)",
-			tooltipBorder: "#666666",
-			positiveColor: "rgba(100, 200, 100, 0.7)",
-			positiveBorder: "rgba(100, 200, 100, 1)",
+		return {
+			textPrimary: getVar("--text-normal"),
+			textSecondary: getVar("--text-muted"),
+			gridColor: getVar("--background-modifier-border"),
+			zeroLineColor: getVar("--text-muted"),
+			tooltipBg: `rgba(${getVar("--mono-rgb-0")}, 0.9)`,
+			tooltipBorder: getVar("--background-modifier-border"),
+			positiveColor: `rgba(${getVar("--color-green-rgb")}, 0.7)`,
+			positiveBorder: `rgb(${getVar("--color-green-rgb")})`,
 		};
-
-		const lightTheme = {
-			textPrimary: "#222222",
-			textSecondary: "#666666",
-			gridColor: "#e0e0e0",
-			zeroLineColor: "#e0e0e0",
-			tooltipBg: "rgba(255, 255, 255, 0.95)",
-			tooltipBorder: "#cccccc",
-			positiveColor: "rgba(40, 160, 40, 0.7)",
-			positiveBorder: "rgba(40, 160, 40, 1)",
-		};
-
-		return isDarkTheme ? darkTheme : lightTheme;
 	}
 
 	private isZeroTick(ctx: ScriptableScaleContext): boolean {
