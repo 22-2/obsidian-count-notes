@@ -20,7 +20,7 @@ type ServiceOptions = {
 	caches?: Record<string, any>;
 	fileContents?: Record<string, string>;
 	leaves?: Array<{ view: any }>;
-	trackingTag?: string;
+	trackingTags?: string[];
 	excludedFolders?: string[];
 };
 
@@ -31,7 +31,7 @@ const createService = (options: ServiceOptions = {}) => {
 	const leaves = options.leaves ?? [];
 	const pluginMock = {
 		settings: {
-			trackingTag: options.trackingTag ?? "novel",
+			trackingTags: options.trackingTags ?? ["novel"],
 			excludedFolders: options.excludedFolders ?? [],
 		},
 		app: {
@@ -87,10 +87,10 @@ describe("DataCollectionService.collectData", () => {
 
 		await service.collectData();
 
-		expect(calcSpy).toHaveBeenCalled();
-		expect(statsStorage.saveLastTotalCharacterCount).toHaveBeenCalledWith(1500);
-		expect(statsStorage.updateDailyStats).toHaveBeenCalledWith("2025-10-02", 500);
-		expect(statsStorage.updateHourlyStats).toHaveBeenCalledWith("2025-10-02", 500);
+		expect(calcSpy).toHaveBeenCalledWith("novel");
+		expect(statsStorage.saveLastTotalCharacterCount).toHaveBeenCalledWith(1500, "novel");
+		expect(statsStorage.updateDailyStats).toHaveBeenCalledWith("2025-10-02", 500, "novel");
+		expect(statsStorage.updateHourlyStats).toHaveBeenCalledWith("2025-10-02", 500, "novel");
 		expect(refreshSpy).toHaveBeenCalled();
 	});
 
@@ -104,9 +104,9 @@ describe("DataCollectionService.collectData", () => {
 
 		await service.collectData();
 
-		expect(statsStorage.saveLastTotalCharacterCount).toHaveBeenCalledWith(500);
-		expect(statsStorage.updateDailyStats).toHaveBeenCalledWith("2025-10-02", -1500);
-		expect(statsStorage.updateHourlyStats).toHaveBeenCalledWith("2025-10-02", -1500);
+		expect(statsStorage.saveLastTotalCharacterCount).toHaveBeenCalledWith(500, "novel");
+		expect(statsStorage.updateDailyStats).toHaveBeenCalledWith("2025-10-02", -1500, "novel");
+		expect(statsStorage.updateHourlyStats).toHaveBeenCalledWith("2025-10-02", -1500, "novel");
 		expect(refreshSpy).toHaveBeenCalled();
 	});
 
@@ -120,10 +120,10 @@ describe("DataCollectionService.collectData", () => {
 
 		await service.collectData();
 
-		expect(statsStorage.saveLastTotalCharacterCount).toHaveBeenCalledWith(800);
+		expect(statsStorage.saveLastTotalCharacterCount).toHaveBeenCalledWith(800, "novel");
 		expect(statsStorage.updateDailyStats).not.toHaveBeenCalled();
 		expect(statsStorage.updateHourlyStats).not.toHaveBeenCalled();
-		expect(refreshSpy).not.toHaveBeenCalled();
+		expect(refreshSpy).toHaveBeenCalled();
 	});
 
 	test("handles first run (no previous stats)", async () => {
@@ -138,11 +138,11 @@ describe("DataCollectionService.collectData", () => {
 
 		await service.collectData();
 
-		expect(calcSpy).toHaveBeenCalled();
-		expect(statsStorage.saveLastTotalCharacterCount).toHaveBeenCalledWith(1500);
+		expect(calcSpy).toHaveBeenCalledWith("novel");
+		expect(statsStorage.saveLastTotalCharacterCount).toHaveBeenCalledWith(1500, "novel");
 		expect(statsStorage.updateDailyStats).not.toHaveBeenCalled();
 		expect(statsStorage.updateHourlyStats).not.toHaveBeenCalled();
-		expect(refreshSpy).not.toHaveBeenCalled();
+		expect(refreshSpy).toHaveBeenCalled();
 	});
 });
 
@@ -254,7 +254,7 @@ describe("DataCollectionService total calculation", () => {
 			fileContents: contents,
 		});
 
-		const total = await service.calculateTotalCharacterCount();
+		const total = await service.calculateTotalCharacterCount("novel");
 		expect(total).toBe("hello".length + "world".length);
 	});
 });

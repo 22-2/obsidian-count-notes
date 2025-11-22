@@ -20,10 +20,10 @@ describe("StatsStorage", () => {
 
 	describe("Daily Stats", () => {
 		it("should save and retrieve daily stats", async () => {
-			await statsStorage.updateDailyStats("2024-01-01", 100);
-			await statsStorage.updateDailyStats("2024-01-02", 200);
+			await statsStorage.updateDailyStats("2024-01-01", 100, "novel");
+			await statsStorage.updateDailyStats("2024-01-02", 200, "novel");
 
-			const dailyStats = await statsStorage.getDailyStats();
+			const dailyStats = await statsStorage.getDailyStats("novel");
 			expect(dailyStats).toEqual({
 				"2024-01-01": 100,
 				"2024-01-02": 200,
@@ -31,23 +31,24 @@ describe("StatsStorage", () => {
 		});
 
 		it("should update existing daily stats", async () => {
-			await statsStorage.updateDailyStats("2024-01-01", 100);
-			await statsStorage.updateDailyStats("2024-01-01", 50);
+			await statsStorage.updateDailyStats("2024-01-01", 100, "novel");
+			await statsStorage.updateDailyStats("2024-01-01", 50, "novel");
 
-			const dailyStats = await statsStorage.getDailyStats();
+			const dailyStats = await statsStorage.getDailyStats("novel");
 			expect(dailyStats).toEqual({
 				"2024-01-01": 150,
 			});
 		});
 
 		it("should retrieve daily stats by date range", async () => {
-			await statsStorage.updateDailyStats("2024-01-01", 100);
-			await statsStorage.updateDailyStats("2024-01-02", 200);
-			await statsStorage.updateDailyStats("2024-01-03", 300);
+			await statsStorage.updateDailyStats("2024-01-01", 100, "novel");
+			await statsStorage.updateDailyStats("2024-01-02", 200, "novel");
+			await statsStorage.updateDailyStats("2024-01-03", 300, "novel");
 
 			const stats = await statsStorage.getDailyStatsByDateRange(
 				"2024-01-01",
-				"2024-01-02"
+				"2024-01-02",
+				"novel"
 			);
 			expect(stats).toEqual({
 				"2024-01-01": 100,
@@ -59,10 +60,10 @@ describe("StatsStorage", () => {
 	describe("Hourly Stats", () => {
 		it("should save and retrieve hourly stats", async () => {
 			const hour = 3; // Fixed hour for consistent testing
-			await statsStorage.updateHourlyStats("2024-01-01", 10, hour);
-			await statsStorage.updateHourlyStats("2024-01-02", 20, hour);
+			await statsStorage.updateHourlyStats("2024-01-01", 10, "novel", hour);
+			await statsStorage.updateHourlyStats("2024-01-02", 20, "novel", hour);
 
-			const hourlyStats = await statsStorage.getHourlyStats();
+			const hourlyStats = await statsStorage.getHourlyStats("novel");
 			expect(hourlyStats).toEqual({
 				[`2024-01-01-${String(hour).padStart(2, "0")}`]: 10,
 				[`2024-01-02-${String(hour).padStart(2, "0")}`]: 20,
@@ -71,10 +72,10 @@ describe("StatsStorage", () => {
 
 		it("should update existing hourly stats", async () => {
 			const hour = 3; // Fixed hour for consistent testing
-			await statsStorage.updateHourlyStats("2024-01-01", 10, hour);
-			await statsStorage.updateHourlyStats("2024-01-01", 5, hour);
+			await statsStorage.updateHourlyStats("2024-01-01", 10, "novel", hour);
+			await statsStorage.updateHourlyStats("2024-01-01", 5, "novel", hour);
 
-			const hourlyStats = await statsStorage.getHourlyStats();
+			const hourlyStats = await statsStorage.getHourlyStats("novel");
 			expect(hourlyStats).toEqual({
 				[`2024-01-01-${String(hour).padStart(2, "0")}`]: 15,
 			});
@@ -82,13 +83,14 @@ describe("StatsStorage", () => {
 
 		it("should retrieve hourly stats by date range", async () => {
 			const hour = 3; // Fixed hour for consistent testing
-			await statsStorage.updateHourlyStats("2024-01-01", 10, hour);
-			await statsStorage.updateHourlyStats("2024-01-02", 20, hour);
-			await statsStorage.updateHourlyStats("2024-01-03", 30, hour);
+			await statsStorage.updateHourlyStats("2024-01-01", 10, "novel", hour);
+			await statsStorage.updateHourlyStats("2024-01-02", 20, "novel", hour);
+			await statsStorage.updateHourlyStats("2024-01-03", 30, "novel", hour);
 
 			const stats = await statsStorage.getHourlyStatsByDateRange(
 				"2024-01-01",
 				"2024-01-02",
+				"novel",
 				hour,
 				hour
 			);
@@ -102,13 +104,13 @@ describe("StatsStorage", () => {
 
 	describe("Last Total Character Count", () => {
 		it("should save and retrieve the last total character count", async () => {
-			await statsStorage.saveLastTotalCharacterCount(12345);
-			const count = await statsStorage.getLastTotalCharacterCount();
+			await statsStorage.saveLastTotalCharacterCount(12345, "novel");
+			const count = await statsStorage.getLastTotalCharacterCount("novel");
 			expect(count).toBe(12345);
 		});
 
 		it("should return null if no count is saved", async () => {
-			const count = await statsStorage.getLastTotalCharacterCount();
+			const count = await statsStorage.getLastTotalCharacterCount("novel");
 			expect(count).toBeNull();
 		});
 	});

@@ -30,10 +30,10 @@ export class PeriodDataService {
 
 	constructor(private statsStorage: StatsStorage) {}
 
-	async getPeriodStats(periodType: PeriodType): Promise<PeriodStats> {
+	async getPeriodStats(periodType: PeriodType, tag: string): Promise<PeriodStats> {
 		const { startDate, endDate } = this.getDateRange(periodType);
-		const dailyStats = await this.statsStorage.getDailyStatsByDateRange(startDate, endDate);
-		const hourlyStats = await this.statsStorage.getHourlyStatsByDateRange(startDate, endDate);
+		const dailyStats = await this.statsStorage.getDailyStatsByDateRange(startDate, endDate, tag);
+		const hourlyStats = await this.statsStorage.getHourlyStatsByDateRange(startDate, endDate, tag);
 
 		const statsCalculators = {
 			day: () => this.getDayStats(dailyStats, hourlyStats),
@@ -50,10 +50,10 @@ export class PeriodDataService {
 		return calculator();
 	}
 
-	async getChartData(periodType: PeriodType): Promise<ChartDataPoint[]> {
+	async getChartData(periodType: PeriodType, tag: string): Promise<ChartDataPoint[]> {
 		const { startDate, endDate } = this.getDateRange(periodType);
-		const dailyStats = await this.statsStorage.getDailyStatsByDateRange(startDate, endDate);
-		const hourlyStats = await this.statsStorage.getHourlyStatsByDateRange(startDate, endDate);
+		const dailyStats = await this.statsStorage.getDailyStatsByDateRange(startDate, endDate, tag);
+		const hourlyStats = await this.statsStorage.getHourlyStatsByDateRange(startDate, endDate, tag);
 
 		const chartDataGenerators = {
 			day: () => this.getDayChartData(hourlyStats),

@@ -11,19 +11,19 @@ class MockStatsStorage implements Partial<StatsStorage> {
 		this.mockHourlyStats = hourlyStats;
 	}
 
-	async getDailyStats() {
+	async getDailyStats(tag: string) {
 		return this.mockDailyStats;
 	}
 
-	async getHourlyStats() {
+	async getHourlyStats(tag: string) {
 		return this.mockHourlyStats;
 	}
 
-	async getDailyStatsByDateRange(startDate: string, endDate: string) {
+	async getDailyStatsByDateRange(startDate: string, endDate: string, tag: string) {
 		return this.mockDailyStats;
 	}
 
-	async getHourlyStatsByDateRange(startDate: string, endDate: string) {
+	async getHourlyStatsByDateRange(startDate: string, endDate: string, tag: string) {
 		return this.mockHourlyStats;
 	}
 }
@@ -70,7 +70,7 @@ describe("Hourly Stats - Time-based Data Collection", () => {
 
 	describe("getDayChartData with hourly stats", () => {
 		test("should aggregate hourly data into 4-hour slots", async () => {
-			const chartData = await service.getChartData("day");
+			const chartData = await service.getChartData("day", "novel");
 
 			expect(chartData).to.have.lengthOf(6);
 
@@ -108,7 +108,7 @@ describe("Hourly Stats - Time-based Data Collection", () => {
 
 			const partialStorage = new MockStatsStorage(dailyStats, hourlyStats);
 			const partialService = new PeriodDataService(partialStorage as any);
-			const chartData = await partialService.getChartData("day");
+			const chartData = await partialService.getChartData("day", "novel");
 
 			// 8-12hスロット: 8時台のみ
 			expect(chartData[2].value).toBe(200);
@@ -123,7 +123,7 @@ describe("Hourly Stats - Time-based Data Collection", () => {
 
 			const emptyStorage = new MockStatsStorage(dailyStats, hourlyStats);
 			const emptyService = new PeriodDataService(emptyStorage as any);
-			const chartData = await emptyService.getChartData("day");
+			const chartData = await emptyService.getChartData("day", "novel");
 
 			expect(chartData).to.have.lengthOf(6);
 			chartData.forEach((point) => {
@@ -134,7 +134,7 @@ describe("Hourly Stats - Time-based Data Collection", () => {
 
 	describe("getDayStats with hourly stats", () => {
 		test("should calculate average from 4-hour slots", async () => {
-			const stats = await service.getPeriodStats("day");
+			const stats = await service.getPeriodStats("day", "novel");
 
 			// 4つの4時間スロットに執筆データがある
 			// 8-12h: 1000, 12-16h: 700, 16-20h: 600, 20-24h: 100
@@ -154,7 +154,7 @@ describe("Hourly Stats - Time-based Data Collection", () => {
 				hourlyStats
 			);
 			const sparseService = new PeriodDataService(sparseStorage as any);
-			const stats = await sparseService.getPeriodStats("day");
+			const stats = await sparseService.getPeriodStats("day", "novel");
 
 			// 2つのスロットのみ: (500 + 500) / 2 = 500
 			expect(stats.average).toBe(500);
@@ -170,13 +170,13 @@ describe("Hourly Stats - Time-based Data Collection", () => {
 			const noHourlyService = new PeriodDataService(
 				noHourlyStorage as any
 			);
-			const stats = await noHourlyService.getPeriodStats("day");
+			const stats = await noHourlyService.getPeriodStats("day", "novel");
 
 			expect(stats.average).toBe(0);
 		});
 
 		test("should return correct total from dailyStats", async () => {
-			const stats = await service.getPeriodStats("day");
+			const stats = await service.getPeriodStats("day", "novel");
 
 			expect(stats.total).toBe(2400);
 		});
@@ -189,9 +189,9 @@ describe("Hourly Stats - Time-based Data Collection", () => {
 			const storage = new MockStatsStorage(dailyStats, hourlyStats);
 			const testService = new PeriodDataService(storage as any);
 
-			await expect(testService.getChartData("day")).resolves.not.toThrow();
+			await expect(testService.getChartData("day", "novel")).resolves.not.toThrow();
 			await expect(
-				testService.getPeriodStats("day")
+				testService.getPeriodStats("day", "novel")
 			).resolves.not.toThrow();
 		});
 
@@ -206,7 +206,7 @@ describe("Hourly Stats - Time-based Data Collection", () => {
 
 			const storage = new MockStatsStorage(dailyStats, hourlyStats);
 			const testService = new PeriodDataService(storage as any);
-			const chartData = await testService.getChartData("day");
+			const chartData = await testService.getChartData("day", "novel");
 
 			// 8-12hスロットに全てのデータ
 			expect(chartData[2].value).toBe(1600);
@@ -230,7 +230,7 @@ describe("Hourly Stats - Time-based Data Collection", () => {
 
 			const storage = new MockStatsStorage(dailyStats, hourlyStats);
 			const testService = new PeriodDataService(storage as any);
-			const chartData = await testService.getChartData("day");
+			const chartData = await testService.getChartData("day", "novel");
 
 			// 各4時間スロットに400文字ずつ
 			chartData.forEach((point) => {
@@ -238,7 +238,7 @@ describe("Hourly Stats - Time-based Data Collection", () => {
 			});
 
 			// 平均も400
-			const stats = await testService.getPeriodStats("day");
+			const stats = await testService.getPeriodStats("day", "novel");
 			expect(stats.average).toBe(400);
 		});
 
@@ -250,19 +250,19 @@ describe("Hourly Stats - Time-based Data Collection", () => {
 			};
 			const storage = new MockStatsStorage(dailyStats, hourlyStats);
 			const testService = new PeriodDataService(storage as any);
-			const chartData = await testService.getChartData("day");
+			const chartData = await testService.getChartData("day", "novel");
 
 			const negativeSlots = chartData.filter((point) => point.value < 0);
 			expect(negativeSlots).to.have.lengthOf(2);
 
-			const stats = await testService.getPeriodStats("day");
+			const stats = await testService.getPeriodStats("day", "novel");
 			expect(stats.total).toBe(-100);
 		});
 	});
 
 	describe("date formatting", () => {
 		test("should use correct date format for chart data", async () => {
-			const chartData = await service.getChartData("day");
+			const chartData = await service.getChartData("day", "novel");
 
 			chartData.forEach((point) => {
 				// YYYY-MM-DD-HH形式 (HHはゼロパディング)
@@ -271,7 +271,7 @@ describe("Hourly Stats - Time-based Data Collection", () => {
 		});
 
 		test("should group data by correct 4-hour boundaries", async () => {
-			const chartData = await service.getChartData("day");
+			const chartData = await service.getChartData("day", "novel");
 
 			// 各スロットの開始時刻を確認
 			expect(chartData[0].date).toContain("-00");

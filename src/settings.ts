@@ -25,17 +25,24 @@ export class CountNovelsSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(this.containerEl)
-			.setName("Tracking Tag")
+			.setName("Tracking Tags")
 			.setDesc(
-				"Tag used to identify files for character counting (default: novel)"
+				"Tags used to identify files for character counting. Enter one tag per line."
 			)
-			.addText((text) => {
-				text.setPlaceholder("novel")
-					.setValue(this.plugin.settings.trackingTag)
+			.addTextArea((text) => {
+				text.setPlaceholder("novel\nstory")
+					.setValue(this.plugin.settings.trackingTags.join("\n"))
 					.onChange(async (value) => {
-						this.plugin.settings.trackingTag = value || "novel";
+						this.plugin.settings.trackingTags = value
+							.split("\n")
+							.map((t) => t.trim())
+							.filter((t) => t !== "");
+						if (this.plugin.settings.trackingTags.length === 0) {
+							this.plugin.settings.trackingTags = ["novel"];
+						}
 						await this.plugin.saveSettings();
 					});
+				text.inputEl.rows = 4;
 			});
 
 		new Setting(this.containerEl)

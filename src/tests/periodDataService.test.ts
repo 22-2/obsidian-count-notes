@@ -8,19 +8,19 @@ class MockStatsStorage implements Partial<StatsStorage> {
 		private mockHourlyStats: Record<string, number> = {}
 	) {}
 
-	async getDailyStats() {
+	async getDailyStats(tag: string) {
 		return this.mockDailyStats;
 	}
 
-	async getHourlyStats() {
+	async getHourlyStats(tag: string) {
 		return this.mockHourlyStats;
 	}
 
-	async getDailyStatsByDateRange(startDate: string, endDate: string) {
+	async getDailyStatsByDateRange(startDate: string, endDate: string, tag: string) {
 		return this.mockDailyStats;
 	}
 
-	async getHourlyStatsByDateRange(startDate: string, endDate: string) {
+	async getHourlyStatsByDateRange(startDate: string, endDate: string, tag: string) {
 		return this.mockHourlyStats;
 	}
 }
@@ -65,7 +65,7 @@ describe("PeriodDataService", () => {
 
 	describe("getPeriodStats", () => {
 		test("should return correct stats for day", async () => {
-			const stats = await service.getPeriodStats("day");
+			const stats = await service.getPeriodStats("day", "novel");
 			expect(stats.total).toBe(1500);
 			expect(stats.average).toBe(1500);
 			expect(stats.streak).toBe(3);
@@ -84,7 +84,7 @@ describe("PeriodDataService", () => {
 			});
 			const weeklyService = new PeriodDataService(weeklyStats as any);
 
-			const stats = await weeklyService.getPeriodStats("week");
+			const stats = await weeklyService.getPeriodStats("week", "novel");
 
 			expect(stats).toMatchObject({
 				total: 700,
@@ -104,9 +104,9 @@ describe("PeriodDataService", () => {
 			);
 			const negativeService = new PeriodDataService(negativeStats as any);
 
-			const stats = await negativeService.getPeriodStats("day");
+			const stats = await negativeService.getPeriodStats("day", "novel");
 			expect(stats.total).toBe(-300);
-			const chartData = await negativeService.getChartData("day");
+			const chartData = await negativeService.getChartData("day", "novel");
 			expect(chartData.find((point) => point.label === "8h")?.value).toBe(
 				-300
 			);
@@ -120,14 +120,14 @@ describe("PeriodDataService", () => {
 			});
 			const streakService = new PeriodDataService(streakStats as any);
 
-			const stats = await streakService.getPeriodStats("week");
+			const stats = await streakService.getPeriodStats("week", "novel");
 			expect(stats.streak).toBe(2);
 		});
 	});
 
 	describe("getChartData", () => {
 		test("should return 6 time slots for day view", async () => {
-			const chartData = await service.getChartData("day");
+			const chartData = await service.getChartData("day", "novel");
 			expect(chartData).to.have.lengthOf(6);
 			expect(chartData[2].value).toBe(1500); // 8h-12h slot
 		});
@@ -144,7 +144,7 @@ describe("PeriodDataService", () => {
 			});
 			const monthlyService = new PeriodDataService(dailyStats as any);
 
-			const chartData = await monthlyService.getChartData("month");
+			const chartData = await monthlyService.getChartData("month", "novel");
 			expect(chartData[0]).toMatchObject({ label: "1-5日", value: 550 });
 			expect(chartData[1]).toMatchObject({ label: "6-10日", value: 500 });
 			expect(chartData[2]).toMatchObject({ label: "11-15日", value: 500 });
@@ -160,7 +160,7 @@ describe("PeriodDataService", () => {
 			});
 			const yearlyService = new PeriodDataService(yearlyStats as any);
 
-			const chartData = await yearlyService.getChartData("year");
+			const chartData = await yearlyService.getChartData("year", "novel");
 
 			expect(chartData).toEqual([
 				{ label: "Q1", value: 150, date: "2025-01-01" },
@@ -176,10 +176,10 @@ describe("PeriodDataService", () => {
 			const emptyStorage = new MockStatsStorage({}, {});
 			const emptyService = new PeriodDataService(emptyStorage as any);
 
-			const dayStats = await emptyService.getPeriodStats("day");
+			const dayStats = await emptyService.getPeriodStats("day", "novel");
 			expect(dayStats.total).toBe(0);
 
-			const dayChart = await emptyService.getChartData("day");
+			const dayChart = await emptyService.getChartData("day", "novel");
 			expect(dayChart.every((d) => d.value === 0)).toBe(true);
 		});
 	});

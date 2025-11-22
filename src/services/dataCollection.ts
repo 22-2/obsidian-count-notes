@@ -144,9 +144,8 @@ export class DataCollectionService {
 	 * 合計文字数を計算する機能
 	 * 要件2.1, 2.2: 指定タグを持つ全ファイルの合計文字数を計算する
 	 */
-	async calculateTotalCharacterCount(): Promise<number> {
+	async calculateTotalCharacterCount(tag: string): Promise<number> {
 		try {
-			const tag = this.plugin.settings.trackingTag;
 			const taggedFiles = await this.findFilesWithTag(tag);
 
 			const counts = await Promise.all(
@@ -161,7 +160,7 @@ export class DataCollectionService {
 			return totalCount;
 		} catch (error) {
 			logger.error(
-				"Count Novels: Error calculating total character count:",
+				`Count Novels: Error calculating total character count for tag "${tag}":`,
 				error
 			);
 			return 0;
@@ -174,48 +173,65 @@ export class DataCollectionService {
 	 */
 	async collectData(): Promise<void> {
 		try {
-			const currentTotal = await this.calculateTotalCharacterCount();
+			const tags = this.plugin.settings.trackingTags;
+			if (!tags || tags.length === 0) {
+				logger.warn("Count Novels: No tracking tags configured.");
+				return;
+			}
+
+			for (const tag of tags) {
+				await this.collectDataForTag(tag);
+			}
+
+			this.refreshViews();
+		} catch (error) {
+			logger.error("Count Novels: Error during data collection:", error);
+		}
+	}
+
+	private async collectDataForTag(tag: string): Promise<void> {
+		try {
+			const currentTotal = await this.calculateTotalCharacterCount(tag);
 			const previousTotal =
-				await this.statsStorage.getLastTotalCharacterCount();
+				await this.statsStorage.getLastTotalCharacterCount(tag);
 
 			if (previousTotal === null) {
 				logger.log(
-					`Count Novels: First run detected. Initializing total count to ${currentTotal}. No stats recorded.`
+					`Count Novels: First run detected for tag "${tag}". Initializing total count to ${currentTotal}. No stats recorded.`
 				);
-				await this.statsStorage.saveLastTotalCharacterCount(currentTotal);
+				await this.statsStorage.saveLastTotalCharacterCount(currentTotal, tag);
 				return;
 			}
 
 			const difference = currentTotal - previousTotal;
 
 			logger.log(
-				`Count Novels: Previous total: ${previousTotal}, Current total: ${currentTotal}, Difference: ${difference}`
+				`Count Novels: Tag "${tag}" - Previous total: ${previousTotal}, Current total: ${currentTotal}, Difference: ${difference}`
 			);
 
 			// 差分が0でも currentTotal は保存する（初回データ収集の場合など）
-			await this.statsStorage.saveLastTotalCharacterCount(currentTotal);
+			await this.statsStorage.saveLastTotalCharacterCount(currentTotal, tag);
 
 			// 差分が0の場合のみ統計を保存しない
 			if (difference === 0) {
-				logger.log("Count Novels: No change in character count.");
+				logger.log(`Count Novels: No change in character count for tag "${tag}".`);
 				return;
 			}
 
 			const today = this.getTodayString();
-			await this.saveDailyAndHourlyStats(today, difference);
-			this.refreshViews();
+			await this.saveDailyAndHourlyStats(today, difference, tag);
 
 			if (difference > 0) {
 				logger.log(
-					`Count Novels: Data collection completed. Recorded ${difference} characters for ${today}`
+					`Count Novels: Data collection completed for tag "${tag}". Recorded ${difference} characters for ${today}`
 				);
 			} else {
 				logger.log(
-					`Count Novels: Character count decreased by ${Math.abs(difference)}. Adjusted stats for ${today}`
+					`Count Novels: Character count decreased by ${Math.abs(difference)} for tag "${tag}". Adjusted stats for ${today}`
 				);
 			}
 		} catch (error) {
-			logger.error("Count Novels: Error during data collection:", error);
+			logger.error(`Count Novels: Error collecting data for tag "${tag}":`, error);
 		}
 	}
 
@@ -235,11 +251,12 @@ export class DataCollectionService {
 	 */
 	private async saveDailyAndHourlyStats(
 		date: string,
-		difference: number
+		difference: number,
+		tag: string
 	): Promise<void> {
 		await Promise.all([
-			this.statsStorage.updateDailyStats(date, difference),
-			this.statsStorage.updateHourlyStats(date, difference),
+			this.statsStorage.updateDailyStats(date, difference, tag),
+			this.statsStorage.updateHourlyStats(date, difference, tag),
 		]);
 	}
 

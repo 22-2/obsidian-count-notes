@@ -66,7 +66,11 @@ export default class CountNovelsPlugin extends Plugin {
 
 				const tags = getAllTags(file.path, this.app);
 
-				if (!tags.includes(this.settings.trackingTag)) {
+				const hasTrackingTag = this.settings.trackingTags.some((tag) =>
+					tags.includes(tag)
+				);
+
+				if (!hasTrackingTag) {
 					return;
 				}
 
@@ -197,10 +201,22 @@ export default class CountNovelsPlugin extends Plugin {
 	async loadSettings(): Promise<void> {
 		try {
 			const pluginData = await this.dataStorage.loadData();
+
+			// Migration: trackingTag -> trackingTags
+			const loadedSettings = pluginData.settings as any;
+			if (
+				loadedSettings &&
+				loadedSettings.trackingTag &&
+				!loadedSettings.trackingTags
+			) {
+				loadedSettings.trackingTags = [loadedSettings.trackingTag];
+				delete loadedSettings.trackingTag;
+			}
+
 			this.settings = Object.assign(
 				{},
 				DEFAULT_SETTINGS,
-				pluginData.settings
+				loadedSettings
 			);
 			this.settings.excludedFolders = normalizeExcludedFolders(
 				this.settings.excludedFolders
