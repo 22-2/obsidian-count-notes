@@ -9,7 +9,9 @@
 	padding: var(--size-4-2);
 	width: 100%;
 	/* height: 100%; */
+	box-sizing: border-box;
 	overflow-y: auto;
+	overflow-x: hidden;
 }
 
 /* メインコンテナの直下要素を中央揃えにする */
@@ -121,18 +123,63 @@
 	position: relative;
 }
 
+/* Use the view's data-type attribute as the container query root so styles
+   (like the clock visibility) are based on the entire view size rather than
+   only the chart box. The view element created by the plugin sets
+   data-type="count-novels-home". */
+[data-type="count-novels-home"] {
+	container-type: size;
+}
+
 /* Clock shown under chart/view */
+
 .count-novels-clock {
 	font-family: Montserrat, Roboto, Arial, Helvetica, sans-serif;
 	color: #c8c3bc;
 	text-align: center;
 	line-height: 1;
-	display: block;
+	display: none; /* default hidden; shown via container query when space exists */
+	font-weight: 700; /* base weight; increased in container queries */
 	/* Use tabular numbers for uniform digit widths */
 	font-variant-numeric: tabular-nums;
 	-webkit-font-variant-numeric: tabular-nums;
 	-moz-font-variant-numeric: tabular-nums;
 	pointer-events: none;
+	box-sizing: border-box;
+	/* Prevent horizontal overflow when font gets very large */
+	max-width: 100%;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* When the chart content (container) has enough height, show the clock and scale font-size */
+@container (min-height: 420px) {
+	.count-novels-clock {
+		display: block;
+		/* scale font size aggressively to fill available vertical space; clamp wide */
+		font-size: clamp(48px, 22vh, 320px);
+		margin-top: 0.6rem;
+		font-weight: 900;
+		letter-spacing: -0.02em;
+		/* cap the clock element height so it doesn't escape the view */
+		max-height: 70vh;
+		overflow: hidden;
+	}
+}
+
+/* Slightly smaller breakpoint to still show clock when moderate height */
+@container (min-height: 300px) and (max-width: 900px) {
+	.count-novels-clock {
+		display: block;
+		/* slightly smaller scale for narrow viewports, but still large */
+		font-size: clamp(48px, 14vh, 200px);
+		margin-top: 0.4rem;
+		font-weight: 800;
+		letter-spacing: -0.01em;
+		max-height: 60vh;
+		overflow: hidden;
+	}
 }
 
 .count-novels-chart-canvas {
