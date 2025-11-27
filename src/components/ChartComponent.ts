@@ -10,15 +10,10 @@ import {
 	type ChartConfiguration,
 	type ChartData,
 	type ScriptableScaleContext,
-	type ChartEvent,     // 追加
-	type ActiveElement,  // 追加
 } from "chart.js";
 import annotationPlugin from "chartjs-plugin-annotation";
 import type { ChartDataPoint, PeriodType } from "../schemas";
 
-/**
- * クラス: DOMの管理とChartインスタンスのライフサイクルのみを担当
- */
 export class ChartComponent {
 	private container: HTMLElement;
 	private chartInstance?: Chart;
@@ -44,10 +39,14 @@ export class ChartComponent {
 
 		try {
 			const colors = getThemeColors();
+			// dateプロパティを活用して「現在」を特定
+			const activeIndex = findActiveIndex(chartData, periodType);
+
 			const chartConfig = createChartConfiguration(
 				chartData,
 				periodType,
-				colors
+				colors,
+				activeIndex
 			);
 			this.chartInstance = new Chart(canvas, chartConfig);
 		} catch (error) {
@@ -69,8 +68,77 @@ export class ChartComponent {
 }
 
 // ---------------------------------------------------------
-// 以下、クラス外に切り出した関数群 (ステートレスなロジック)
+// 以下、クラス外に切り出した関数群
 // ---------------------------------------------------------
+
+/**
+ * チャートのデータに含まれる `date` プロパティと現在時刻を比較して
+ * ハイライトすべきインデックスを特定する
+ */
+function findActiveIndex(data: ChartDataPoint[], period: PeriodType): number {
+	const now = new Date();
+	const currentHour = now.getHours();
+	
+	// 今日の日付文字列を作成 (YYYY-MM-DD) ※ローカルタイム基準
+	const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+	
+	const currentYear = now.getFullYear();
+	const currentMonth = now.getMonth() + 1;
+
+	// 配列を後ろから走査（最新のものからチェックするため）
+	for (let i = data.length - 1; i >= 0; i--) {
+		const point = data[i] as any; 
+		const pointDateStr = point.date; // "2025-11-27"
+		
+		// --- 24hours (時間別) ---
+		if (period === "24hours") {
+			// ★修正: 日付チェックを外し、純粋に「時間」だけでマッチングさせる
+			// これにより、テストデータが未来/過去の日付でも、現在の時間位置が表示されます
+			const labelHour = parseInt(point.label); // "4h" -> 4, "12h" -> 12
+			
+			// 現在の時間 (14時) >= ラベルの時間 (12時) なら、その区分が現在
+			// データが 0, 4, 8, 12, 16... とある場合、14時は 12 の区画に含まれる
+			if (!isNaN(labelHour) && currentHour >= labelHour) {
+				return i;
+			}
+		}
+
+		// --- day / week (日次・週次) ---
+		else if (period === "day" || period === "week") {
+			// 日付が完全に一致する場合のみハイライト
+			// ※ label もチェック対象に含める（dateがない場合への備え）
+			if (pointDateStr === todayStr || point.label === todayStr) {
+				return i;
+			}
+		}
+
+		// --- month (月間表示) ---
+		else if (period === "month") {
+			if (!pointDateStr) continue;
+			const pDate = new Date(pointDateStr);
+			// 同じ年・同じ月であり、かつ未来の日付でない
+			if (pDate.getFullYear() === currentYear && (pDate.getMonth() + 1) === currentMonth) {
+				if (pointDateStr <= todayStr) {
+					return i;
+				}
+			}
+		}
+
+		// --- year (年間表示) ---
+		else if (period === "year") {
+			if (!pointDateStr) continue;
+			const pDate = new Date(pointDateStr);
+			// 同じ年であり、かつ未来の日付でない
+			if (pDate.getFullYear() === currentYear) {
+				if (pointDateStr <= todayStr) {
+					return i;
+				}
+			}
+		}
+	}
+
+	return -1; // 該当なし
+}
 
 function initializeChartJS(): void {
 	if (ChartComponent['isChartJsRegistered']) return;
@@ -129,6 +197,7 @@ interface ThemeColors {
 	fadedColor: string;
 	fadedNegativeColor: string;
 	fadedNegativeBorder: string;
+	fadedNegativeBorder2: string; // 予備
 }
 
 function getThemeColors(): ThemeColors {
@@ -149,22 +218,17 @@ function getThemeColors(): ThemeColors {
 		fadedColor: `rgba(${getVar("--color-green-rgb")}, 0.25)`,
 		fadedNegativeColor: `rgba(${getVar("--color-red-rgb")}, 0.28)`,
 		fadedNegativeBorder: `rgba(${getVar("--color-red-rgb")}, 0.38)`,
+		fadedNegativeBorder2: `rgba(${getVar("--color-red-rgb")}, 0.38)`,
 	};
 }
 
 function createChartConfiguration(
 	dataPoints: ChartDataPoint[],
 	periodType: PeriodType,
-	colors: ThemeColors
+	colors: ThemeColors,
+	activeIndex: number
 ): ChartConfiguration<"bar"> {
-	
-	// ★変更点1: アクティブなインデックスをクロージャで管理
-	let activeIndex: number | null = null;
-
-	// アクティブインデックスを取得するゲッター（各コールバックに渡す）
-	const getActiveIndex = () => activeIndex;
-
-	const chartData = convertToChartJsData(dataPoints, colors, getActiveIndex);
+	const chartData = convertToChartJsData(dataPoints, colors, activeIndex);
 	const averageValue = calculateAverageFromChartData(chartData);
 
 	return {
@@ -181,20 +245,8 @@ function createChartConfiguration(
 				intersect: false,
 				mode: "index",
 			},
-			// ★変更点2: onHoverでアクティブインデックスを更新して再描画
-			onHover: (event: ChartEvent, elements: ActiveElement[], chart: Chart) => {
-				const newIndex = elements.length > 0 ? elements[0].index : null;
-				
-				// 状態が変わった時だけ更新（無限ループ防止）
-				if (activeIndex !== newIndex) {
-					activeIndex = newIndex;
-					// アニメーションなしで更新してパフォーマンス確保
-					chart.update('none'); 
-				}
-			},
 			plugins: createChartPlugins(colors, averageValue),
-			// ゲッターを渡す
-			scales: createChartScales(colors, chartData, periodType, getActiveIndex),
+			scales: createChartScales(colors, chartData, periodType, activeIndex),
 		},
 		plugins: [createDataLabelsPlugin(colors)],
 	};
@@ -203,7 +255,7 @@ function createChartConfiguration(
 function convertToChartJsData(
 	chartData: ChartDataPoint[],
 	colors: ThemeColors,
-	getActiveIndex: () => number | null // 追加
+	activeIndex: number
 ): ChartData<"bar"> {
 	return {
 		labels: chartData.map((point) => point.label),
@@ -214,26 +266,12 @@ function convertToChartJsData(
 				backgroundColor: (ctx: any) => {
 					try {
 						const val = typeof ctx.parsed?.y === 'number' ? ctx.parsed.y : ctx.raw ?? 0;
-						const labels = ctx.chart?.data?.labels || [];
+						const isActive = ctx.dataIndex === activeIndex;
 						
-						// ★変更点3: ctx.active または getActiveIndex() で判定
-						// ctx.active はバー自体のホバー判定、getActiveIndexは軸と同期させるため
-						const isActive = ctx.active || (ctx.dataIndex === getActiveIndex());
-						
-						// 最後尾のデータかどうか
-						const isLast = typeof ctx.dataIndex === "number" && ctx.dataIndex === labels.length - 1;
-
-						// ネガティブ値の場合
 						if (val < 0) {
-							// アクティブなら濃く、それ以外は薄く
 							return isActive ? colors.negativeColor : colors.fadedNegativeColor;
 						}
-						
-						// アクティブなら濃く、それ以外は薄く
-						// (最後尾を目立たせたい場合は isLast の条件もここに加える)
-						if (isActive) return colors.positiveColor;
-						return colors.fadedColor;
-
+						return isActive ? colors.positiveColor : colors.fadedColor;
 					} catch (e) {
 						return colors.fadedColor;
 					}
@@ -241,16 +279,12 @@ function convertToChartJsData(
 				borderColor: (ctx: any) => {
 					try {
 						const val = typeof ctx.parsed?.y === 'number' ? ctx.parsed.y : ctx.raw ?? 0;
-						
-						const isActive = ctx.active || (ctx.dataIndex === getActiveIndex());
+						const isActive = ctx.dataIndex === activeIndex;
 
 						if (val < 0) {
 							return isActive ? colors.negativeBorder : colors.fadedNegativeBorder;
 						}
-						
-						if (isActive) return colors.positiveBorder;
-						return 'rgba(0,0,0,0)'; // 非アクティブ時はボーダーなし
-
+						return isActive ? colors.positiveBorder : 'rgba(0,0,0,0)';
 					} catch (e) {
 						return 'rgba(0,0,0,0)';
 					}
@@ -311,32 +345,25 @@ function createChartScales(
 	colors: ThemeColors,
 	chartData: ChartData<"bar">,
 	periodType: PeriodType,
-	getActiveIndex: () => number | null // 追加
+	activeIndex: number
 ) {
 	return {
-		x: createXAxisConfig(colors, periodType, getActiveIndex),
+		x: createXAxisConfig(colors, periodType, activeIndex),
 		y: createYAxisConfig(colors, chartData),
 	};
 }
 
-function createXAxisConfig(
-	colors: ThemeColors, 
-	periodType: PeriodType,
-	getActiveIndex: () => number | null // 追加
-) {
+function createXAxisConfig(colors: ThemeColors, periodType: PeriodType, activeIndex: number) {
 	const config: any = {
 		type: "category",
 		ticks: {
 			color: (ctx: any) => {
-				// ★変更点4: 渡されたゲッター関数を使って判定
-				const activeIdx = getActiveIndex();
-				const isHighlighted = (typeof ctx.index === "number") && (activeIdx !== null && ctx.index === activeIdx);
-				return isHighlighted ? colors.positiveBorder : colors.textSecondary;
+				const isActive = ctx.index === activeIndex;
+				return isActive ? colors.positiveBorder : colors.textSecondary;
 			},
 			font: (ctx: any) => {
-				const activeIdx = getActiveIndex();
-				const isHighlighted = (typeof ctx.index === "number") && (activeIdx !== null && ctx.index === activeIdx);
-				return { size: 13, weight: isHighlighted ? "700" : "400" };
+				const isActive = ctx.index === activeIndex;
+				return { size: 13, weight: isActive ? "700" : "400" };
 			},
 			maxRotation: 0,
 			minRotation: 0,
@@ -477,5 +504,3 @@ function isZeroTick(ctx: ScriptableScaleContext): boolean {
 	const value = ctx.tick?.value;
 	return typeof value === "number" && value === 0;
 }
-
-// ヘルパー: getActiveIndexFromChart は不安定なため削除し、onHoverで管理する方式に変更
