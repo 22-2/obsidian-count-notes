@@ -24,23 +24,7 @@ export class ChartComponent {
 
 	constructor(container: HTMLElement) {
 		this.container = container;
-		this.initializeChartJS();
-	}
-
-	private initializeChartJS(): void {
-		if (ChartComponent.isChartJsRegistered) return;
-
-		Chart.register(
-			BarController,
-			CategoryScale,
-			LinearScale,
-			BarElement,
-			Title,
-			Tooltip,
-			Legend,
-			annotationPlugin
-		);
-		ChartComponent.isChartJsRegistered = true;
+		initializeChartJS();
 	}
 
 	public render(chartData: ChartDataPoint[], periodType: PeriodType): void {
@@ -48,7 +32,7 @@ export class ChartComponent {
 		this.container.empty();
 
 		if (chartData.length === 0) {
-			this.renderNoDataMessage();
+			renderNoDataMessage(this.container);
 			return;
 		}
 
@@ -57,7 +41,6 @@ export class ChartComponent {
 		});
 
 		try {
-			// テーマカラーを取得して設定生成関数に渡す
 			const colors = getThemeColors();
 			const chartConfig = createChartConfiguration(
 				chartData,
@@ -67,7 +50,7 @@ export class ChartComponent {
 			this.chartInstance = new Chart(canvas, chartConfig);
 		} catch (error) {
 			console.error("Count Novels: Failed to create chart:", error);
-			this.renderChartFallback(chartData);
+			renderChartFallback(this.container, chartData);
 		}
 	}
 
@@ -81,40 +64,54 @@ export class ChartComponent {
 			this.chartInstance = undefined;
 		}
 	}
-
-	private renderNoDataMessage(): void {
-		this.container.createEl("p", {
-			text: "データがありません",
-			cls: "count-novels-no-chart-data",
-		});
-	}
-
-	private renderChartFallback(chartData: ChartDataPoint[]): void {
-		this.container.empty();
-		this.container.createEl("p", {
-			text: "グラフの読み込みに失敗しました。テキスト形式で統計を表示します。",
-			cls: "count-novels-placeholder",
-		});
-
-		const statsContainer = this.container.createDiv(
-			"count-novels-text-stats"
-		);
-		statsContainer.createEl("h3", { text: "執筆記録" });
-
-		chartData.forEach((point) => {
-			const statItem = statsContainer.createDiv("count-novels-stat-item");
-			statItem.createEl("span", { text: `${point.label}: ` });
-			statItem.createEl("span", {
-				text: `${point.value.toLocaleString()}文字`,
-				cls: "positive",
-			});
-		});
-	}
 }
 
 // ---------------------------------------------------------
 // 以下、クラス外に切り出した関数群 (ステートレスなロジック)
 // ---------------------------------------------------------
+
+function initializeChartJS(): void {
+	if (ChartComponent['isChartJsRegistered']) return;
+
+	Chart.register(
+		BarController,
+		CategoryScale,
+		LinearScale,
+		BarElement,
+		Title,
+		Tooltip,
+		Legend,
+		annotationPlugin
+	);
+	ChartComponent['isChartJsRegistered'] = true;
+}
+
+function renderNoDataMessage(container: HTMLElement): void {
+	container.createEl("p", {
+		text: "データがありません",
+		cls: "count-novels-no-chart-data",
+	});
+}
+
+function renderChartFallback(container: HTMLElement, chartData: ChartDataPoint[]): void {
+	container.empty();
+	container.createEl("p", {
+		text: "グラフの読み込みに失敗しました。テキスト形式で統計を表示します。",
+		cls: "count-novels-placeholder",
+	});
+
+	const statsContainer = container.createDiv("count-novels-text-stats");
+	statsContainer.createEl("h3", { text: "執筆記録" });
+
+	chartData.forEach((point) => {
+		const statItem = statsContainer.createDiv("count-novels-stat-item");
+		statItem.createEl("span", { text: `${point.label}: ` });
+		statItem.createEl("span", {
+			text: `${point.value.toLocaleString()}文字`,
+			cls: "positive",
+		});
+	});
+}
 
 interface ThemeColors {
 	textPrimary: string;
@@ -192,7 +189,6 @@ function convertToChartJsData(
 			{
 				label: "",
 				data: chartData.map((point) => point.value),
-				// scriptable colors: 負の値は赤、最新は強調、その他は淡色
 				backgroundColor: (ctx: any) => {
 					try {
 						const val = typeof ctx.parsed?.y === 'number' ? ctx.parsed.y : ctx.raw ?? 0;
@@ -288,12 +284,10 @@ function createXAxisConfig(colors: ThemeColors, periodType: PeriodType) {
 	const config: any = {
 		type: "category",
 		ticks: {
-			// scriptable ticks: 最新（最後）のラベルをより明るく目立たせる
 			color: (ctx: any) => {
 				try {
 					const labels = ctx.chart?.data?.labels || [];
 					const isLast = typeof ctx.index === "number" && ctx.index === labels.length - 1;
-					// positiveBorder は不透明で目立つ色（RGB文字列）なので強調に使用
 					return isLast ? colors.positiveBorder : colors.textSecondary;
 				} catch (e) {
 					return colors.textSecondary;
@@ -303,7 +297,6 @@ function createXAxisConfig(colors: ThemeColors, periodType: PeriodType) {
 				try {
 					const labels = ctx.chart?.data?.labels || [];
 					const isLast = typeof ctx.index === "number" && ctx.index === labels.length - 1;
-					// サイズをやや大きく、ウェイトを数値で指定してより太字にする
 					return { size: 13, weight: isLast ? "700" : "400" };
 				} catch (e) {
 					return { size: 11, weight: "400" };
