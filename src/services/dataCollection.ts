@@ -130,7 +130,10 @@ export class DataCollectionService {
 		try {
 			const content = await this.plugin.app.vault.cachedRead(file);
 			const { content: markdownContent } = splitMd(content);
-			return markdownContent.length;
+			// Remove ASCII whitespace (spaces, tabs, newlines) and full-width spaces (U+3000)
+			// so that only visible/non-whitespace characters are counted.
+			const cleaned = markdownContent.replace(/[\s\u3000]+/g, "");
+			return cleaned.length;
 		} catch (error) {
 			logger.warn(
 				`Count Novels: Error reading file ${file.path}:`,
