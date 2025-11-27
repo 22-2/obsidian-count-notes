@@ -53,7 +53,7 @@ export class TabComponent {
 		);
 
 		tabButtons.forEach((button, index) => {
-			const periodTypes: PeriodType[] = ["day", "week", "month", "year"];
+			const periodTypes = Object.keys(PERIOD_CONFIGS) as PeriodType[];
 			const periodType = periodTypes[index];
 
 			if (periodType === this.activeTab) {

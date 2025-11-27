@@ -64,6 +64,26 @@ describe("PeriodDataService", () => {
 	});
 
 	describe("getPeriodStats", () => {
+		test("should return correct stats for 4hours", async () => {
+			// 時間を 10:00 に設定
+			vi.setSystemTime(new Date(2025, 9, 2, 10, 0, 0));
+
+			const hourlyStats = {
+				"2025-10-02-07": 100,
+				"2025-10-02-08": 200,
+				"2025-10-02-09": 300,
+				"2025-10-02-10": 400,
+			};
+			const storage = new MockStatsStorage({}, hourlyStats);
+			const service = new PeriodDataService(storage as any);
+
+			const stats = await service.getPeriodStats("4hours", "novel");
+			// 10, 9, 8, 7 の4時間分
+			expect(stats.total).toBe(1000);
+			expect(stats.average).toBe(250);
+			expect(stats.periodLabel).toBe("4時間");
+		});
+
 		test("should return correct stats for day", async () => {
 			const stats = await service.getPeriodStats("day", "novel");
 			expect(stats.total).toBe(1500);
@@ -126,6 +146,27 @@ describe("PeriodDataService", () => {
 	});
 
 	describe("getChartData", () => {
+		test("should return 4 time slots for 4hours view", async () => {
+			// 時間を 10:00 に設定
+			vi.setSystemTime(new Date(2025, 9, 2, 10, 0, 0));
+
+			const hourlyStats = {
+				"2025-10-02-07": 100,
+				"2025-10-02-08": 200,
+				"2025-10-02-09": 300,
+				"2025-10-02-10": 400,
+			};
+			const storage = new MockStatsStorage({}, hourlyStats);
+			const service = new PeriodDataService(storage as any);
+
+			const chartData = await service.getChartData("4hours", "novel");
+			expect(chartData).toHaveLength(4);
+			expect(chartData[0].label).toBe("7h");
+			expect(chartData[0].value).toBe(100);
+			expect(chartData[3].label).toBe("10h");
+			expect(chartData[3].value).toBe(400);
+		});
+
 		test("should return 6 time slots for day view", async () => {
 			const chartData = await service.getChartData("day", "novel");
 			expect(chartData).to.have.lengthOf(6);

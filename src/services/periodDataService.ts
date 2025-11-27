@@ -36,6 +36,7 @@ export class PeriodDataService {
 		const hourlyStats = await this.statsStorage.getHourlyStatsByDateRange(startDate, endDate, tag);
 
 		const statsCalculators = {
+			"4hours": () => this.getFourHoursStats(dailyStats, hourlyStats),
 			day: () => this.getDayStats(dailyStats, hourlyStats),
 			week: () => this.getWeekStats(dailyStats),
 			month: () => this.getMonthStats(dailyStats),
@@ -56,6 +57,7 @@ export class PeriodDataService {
 		const hourlyStats = await this.statsStorage.getHourlyStatsByDateRange(startDate, endDate, tag);
 
 		const chartDataGenerators = {
+			"4hours": () => this.getFourHoursChartData(hourlyStats),
 			day: () => this.getDayChartData(hourlyStats),
 			week: () => this.getWeekChartData(dailyStats),
 			month: () => this.getMonthChartData(dailyStats),
@@ -73,6 +75,14 @@ export class PeriodDataService {
 	private getDateRange(periodType: PeriodType): { startDate: string; endDate: string } {
 		const today = new Date();
 		switch (periodType) {
+			case "4hours": {
+				const yesterday = new Date(today);
+				yesterday.setDate(today.getDate() - 1);
+				return {
+					startDate: this.formatDateString(yesterday),
+					endDate: this.formatDateString(today),
+				};
+			}
 			case "day": {
 				const todayStr = this.formatDateString(today);
 				return { startDate: todayStr, endDate: todayStr };
@@ -511,5 +521,66 @@ export class PeriodDataService {
 		}
 		const dayStr = day.toString().padStart(2, "0");
 		return `${year}-${monthStr}-${dayStr}`;
+	}
+
+	private getFourHoursStats(
+		dailyStats: DailyStats,
+		hourlyStats: HourlyStats
+	): PeriodStats {
+		if (!hourlyStats) {
+			return this.createEmptyStats("4時間");
+		}
+
+		const now = new Date();
+		let total = 0;
+		let activeHours = 0;
+
+		for (let i = 0; i < 4; i++) {
+			const targetTime = new Date(now);
+			targetTime.setHours(now.getHours() - i);
+
+			const dateString = this.formatDateString(targetTime);
+			const hourString = this.formatHour(targetTime.getHours());
+			const timeSlotKey = `${dateString}-${hourString}`;
+
+			const count = hourlyStats[timeSlotKey] || 0;
+			total += count;
+			if (count > 0) activeHours++;
+		}
+
+		const average = activeHours > 0 ? Math.round(total / activeHours) : 0;
+		const streak = this.calculateStreak(dailyStats);
+
+		return {
+			total,
+			average,
+			streak,
+			periodLabel: "4時間",
+		};
+	}
+
+	private getFourHoursChartData(hourlyStats: HourlyStats): ChartDataPoint[] {
+		const now = new Date();
+		const chartData: ChartDataPoint[] = [];
+
+		// 3時間前から現在まで（昇順）
+		for (let i = 3; i >= 0; i--) {
+			const targetTime = new Date(now);
+			targetTime.setHours(now.getHours() - i);
+
+			const dateString = this.formatDateString(targetTime);
+			const hourString = this.formatHour(targetTime.getHours());
+			const timeSlotKey = `${dateString}-${hourString}`;
+
+			const count = hourlyStats?.[timeSlotKey] || 0;
+
+			chartData.push({
+				label: `${targetTime.getHours()}h`,
+				value: count,
+				date: timeSlotKey,
+			});
+		}
+
+		return chartData;
 	}
 }
