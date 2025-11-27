@@ -10,6 +10,8 @@ import {
 	type ChartConfiguration,
 	type ChartData,
 	type ScriptableScaleContext,
+	type ChartEvent,     // 追加
+	type ActiveElement,  // 追加
 } from "chart.js";
 import annotationPlugin from "chartjs-plugin-annotation";
 import type { ChartDataPoint, PeriodType } from "../schemas";
@@ -155,7 +157,14 @@ function createChartConfiguration(
 	periodType: PeriodType,
 	colors: ThemeColors
 ): ChartConfiguration<"bar"> {
-	const chartData = convertToChartJsData(dataPoints, colors);
+	
+	// ★変更点1: アクティブなインデックスをクロージャで管理
+	let activeIndex: number | null = null;
+
+	// アクティブインデックスを取得するゲッター（各コールバックに渡す）
+	const getActiveIndex = () => activeIndex;
+
+	const chartData = convertToChartJsData(dataPoints, colors, getActiveIndex);
 	const averageValue = calculateAverageFromChartData(chartData);
 
 	return {
@@ -172,8 +181,20 @@ function createChartConfiguration(
 				intersect: false,
 				mode: "index",
 			},
+			// ★変更点2: onHoverでアクティブインデックスを更新して再描画
+			onHover: (event: ChartEvent, elements: ActiveElement[], chart: Chart) => {
+				const newIndex = elements.length > 0 ? elements[0].index : null;
+				
+				// 状態が変わった時だけ更新（無限ループ防止）
+				if (activeIndex !== newIndex) {
+					activeIndex = newIndex;
+					// アニメーションなしで更新してパフォーマンス確保
+					chart.update('none'); 
+				}
+			},
 			plugins: createChartPlugins(colors, averageValue),
-			scales: createChartScales(colors, chartData, periodType),
+			// ゲッターを渡す
+			scales: createChartScales(colors, chartData, periodType, getActiveIndex),
 		},
 		plugins: [createDataLabelsPlugin(colors)],
 	};
@@ -181,7 +202,8 @@ function createChartConfiguration(
 
 function convertToChartJsData(
 	chartData: ChartDataPoint[],
-	colors: ThemeColors
+	colors: ThemeColors,
+	getActiveIndex: () => number | null // 追加
 ): ChartData<"bar"> {
 	return {
 		labels: chartData.map((point) => point.label),
@@ -193,12 +215,25 @@ function convertToChartJsData(
 					try {
 						const val = typeof ctx.parsed?.y === 'number' ? ctx.parsed.y : ctx.raw ?? 0;
 						const labels = ctx.chart?.data?.labels || [];
+						
+						// ★変更点3: ctx.active または getActiveIndex() で判定
+						// ctx.active はバー自体のホバー判定、getActiveIndexは軸と同期させるため
+						const isActive = ctx.active || (ctx.dataIndex === getActiveIndex());
+						
+						// 最後尾のデータかどうか
 						const isLast = typeof ctx.dataIndex === "number" && ctx.dataIndex === labels.length - 1;
+
+						// ネガティブ値の場合
 						if (val < 0) {
-							return !isLast ? colors.fadedNegativeColor : colors.negativeColor;
+							// アクティブなら濃く、それ以外は薄く
+							return isActive ? colors.negativeColor : colors.fadedNegativeColor;
 						}
-						if (!isLast) return colors.fadedColor;
-						return colors.positiveColor;
+						
+						// アクティブなら濃く、それ以外は薄く
+						// (最後尾を目立たせたい場合は isLast の条件もここに加える)
+						if (isActive) return colors.positiveColor;
+						return colors.fadedColor;
+
 					} catch (e) {
 						return colors.fadedColor;
 					}
@@ -206,13 +241,16 @@ function convertToChartJsData(
 				borderColor: (ctx: any) => {
 					try {
 						const val = typeof ctx.parsed?.y === 'number' ? ctx.parsed.y : ctx.raw ?? 0;
-						const labels = ctx.chart?.data?.labels || [];
-						const isLast = typeof ctx.dataIndex === "number" && ctx.dataIndex === labels.length - 1;
+						
+						const isActive = ctx.active || (ctx.dataIndex === getActiveIndex());
+
 						if (val < 0) {
-							return !isLast ? colors.fadedNegativeBorder : colors.negativeBorder;
+							return isActive ? colors.negativeBorder : colors.fadedNegativeBorder;
 						}
-						if (!isLast) return 'rgba(0,0,0,0)';
-						return colors.positiveBorder;
+						
+						if (isActive) return colors.positiveBorder;
+						return 'rgba(0,0,0,0)'; // 非アクティブ時はボーダーなし
+
 					} catch (e) {
 						return 'rgba(0,0,0,0)';
 					}
@@ -272,53 +310,34 @@ function createChartPlugins(colors: ThemeColors, averageValue: number | null) {
 function createChartScales(
 	colors: ThemeColors,
 	chartData: ChartData<"bar">,
-	periodType: PeriodType
+	periodType: PeriodType,
+	getActiveIndex: () => number | null // 追加
 ) {
 	return {
-		x: createXAxisConfig(colors, periodType),
+		x: createXAxisConfig(colors, periodType, getActiveIndex),
 		y: createYAxisConfig(colors, chartData),
 	};
 }
 
-function createXAxisConfig(colors: ThemeColors, periodType: PeriodType) {
+function createXAxisConfig(
+	colors: ThemeColors, 
+	periodType: PeriodType,
+	getActiveIndex: () => number | null // 追加
+) {
 	const config: any = {
 		type: "category",
 		ticks: {
-			// color: (ctx: any) => {
-			// 	try {
-			// 		// ホバー/ツールチップでアクティブな要素を取得
-			// 		const activeElements =
-			// 			typeof ctx.chart.getActiveElements === "function"
-			// 				? (ctx.chart.getActiveElements() as any[])
-			// 				: ctx.chart?.tooltip?._active || [];
-					
-			// 		const activeIndex = Array.isArray(activeElements) && activeElements.length > 0 ? activeElements[0].index : null;
-					
-			// 		// 修正箇所: activeIndex が null (ホバーなし) の場合は何もハイライトしないように変更
-			// 		const isHighlighted = (typeof ctx.index === "number") && (activeIndex !== null && ctx.index === activeIndex);
-					
-			// 		return isHighlighted ? colors.positiveBorder : colors.textSecondary;
-			// 	} catch (e) {
-			// 		return colors.textSecondary;
-			// 	}
-			// },
-			// font: (ctx: any) => {
-			// 	try {
-			// 		const activeElements =
-			// 			typeof ctx.chart.getActiveElements === "function"
-			// 				? (ctx.chart.getActiveElements() as any[])
-			// 				: ctx.chart?.tooltip?._active || [];
-
-			// 		const activeIndex = Array.isArray(activeElements) && activeElements.length > 0 ? activeElements[0].index : null;
-					
-			// 		// 修正箇所: 同様にフォントサイズ変更のロジックも修正
-			// 		const isHighlighted = (typeof ctx.index === "number") && (activeIndex !== null && ctx.index === activeIndex);
-					
-			// 		return { size: 13, weight: isHighlighted ? "700" : "400" };
-			// 	} catch (e) {
-			// 		return { size: 11, weight: "400" };
-			// 	}
-			// },
+			color: (ctx: any) => {
+				// ★変更点4: 渡されたゲッター関数を使って判定
+				const activeIdx = getActiveIndex();
+				const isHighlighted = (typeof ctx.index === "number") && (activeIdx !== null && ctx.index === activeIdx);
+				return isHighlighted ? colors.positiveBorder : colors.textSecondary;
+			},
+			font: (ctx: any) => {
+				const activeIdx = getActiveIndex();
+				const isHighlighted = (typeof ctx.index === "number") && (activeIdx !== null && ctx.index === activeIdx);
+				return { size: 13, weight: isHighlighted ? "700" : "400" };
+			},
 			maxRotation: 0,
 			minRotation: 0,
 		},
@@ -458,3 +477,5 @@ function isZeroTick(ctx: ScriptableScaleContext): boolean {
 	const value = ctx.tick?.value;
 	return typeof value === "number" && value === 0;
 }
+
+// ヘルパー: getActiveIndexFromChart は不安定なため削除し、onHoverで管理する方式に変更
