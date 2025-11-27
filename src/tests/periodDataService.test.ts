@@ -78,9 +78,9 @@ describe("PeriodDataService", () => {
 			const service = new PeriodDataService(storage as any);
 
 			const stats = await service.getPeriodStats("4hours", "novel");
-			// 10, 9, 8, 7 の4時間分
-			expect(stats.total).toBe(1000);
-			expect(stats.average).toBe(250);
+			// 固定4時間ブロック (08-11) を使用するため、08,09,10,11 の4時間分
+			expect(stats.total).toBe(900);
+			expect(stats.average).toBe(300);
 			expect(stats.periodLabel).toBe("4時間");
 		});
 
@@ -161,10 +161,10 @@ describe("PeriodDataService", () => {
 
 			const chartData = await service.getChartData("4hours", "novel");
 			expect(chartData).toHaveLength(4);
-			expect(chartData[0].label).toBe("7h");
-			expect(chartData[0].value).toBe(100);
-			expect(chartData[3].label).toBe("10h");
-			expect(chartData[3].value).toBe(400);
+			expect(chartData[0].label).toBe("8h");
+			expect(chartData[0].value).toBe(200);
+			expect(chartData[3].label).toBe("11h");
+			expect(chartData[3].value).toBe(0);
 		});
 
 		test("should return 6 time slots for day view", async () => {

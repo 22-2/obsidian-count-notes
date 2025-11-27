@@ -76,12 +76,9 @@ export class PeriodDataService {
 		const today = new Date();
 		switch (periodType) {
 			case "4hours": {
-				const yesterday = new Date(today);
-				yesterday.setDate(today.getDate() - 1);
-				return {
-					startDate: this.formatDateString(yesterday),
-					endDate: this.formatDateString(today),
-				};
+				// 固定区切りの4時間ブロックは同一日の範囲で十分（00-03,04-07,...,20-23）
+				const todayStr = this.formatDateString(today);
+				return { startDate: todayStr, endDate: todayStr };
 			}
 			case "day": {
 				const todayStr = this.formatDateString(today);
@@ -531,13 +528,16 @@ export class PeriodDataService {
 			return this.createEmptyStats("4時間");
 		}
 
+		// 現在時刻に属する「固定された」4時間ブロックを計算する
 		const now = new Date();
+		const slotStart = Math.floor(now.getHours() / PeriodDataService.HOURS_PER_SLOT) * PeriodDataService.HOURS_PER_SLOT;
 		let total = 0;
 		let activeHours = 0;
 
-		for (let i = 0; i < 4; i++) {
+		for (let offset = 0; offset < PeriodDataService.HOURS_PER_SLOT; offset++) {
+			const hour = slotStart + offset;
 			const targetTime = new Date(now);
-			targetTime.setHours(now.getHours() - i);
+			targetTime.setHours(hour);
 
 			const dateString = this.formatDateString(targetTime);
 			const hourString = this.formatHour(targetTime.getHours());
@@ -563,10 +563,13 @@ export class PeriodDataService {
 		const now = new Date();
 		const chartData: ChartDataPoint[] = [];
 
-		// 3時間前から現在まで（昇順）
-		for (let i = 3; i >= 0; i--) {
+		// 現在が属する固定4時間ブロックの開始時刻
+		const slotStart = Math.floor(now.getHours() / PeriodDataService.HOURS_PER_SLOT) * PeriodDataService.HOURS_PER_SLOT;
+
+		for (let offset = 0; offset < PeriodDataService.HOURS_PER_SLOT; offset++) {
+			const hour = slotStart + offset;
 			const targetTime = new Date(now);
-			targetTime.setHours(now.getHours() - i);
+			targetTime.setHours(hour);
 
 			const dateString = this.formatDateString(targetTime);
 			const hourString = this.formatHour(targetTime.getHours());
