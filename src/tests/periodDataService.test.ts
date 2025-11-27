@@ -64,7 +64,7 @@ describe("PeriodDataService", () => {
 	});
 
 	describe("getPeriodStats", () => {
-		test("should return correct stats for 4hours", async () => {
+		test("should return correct stats for 24hours", async () => {
 			// 時間を 10:00 に設定
 			vi.setSystemTime(new Date(2025, 9, 2, 10, 0, 0));
 
@@ -77,11 +77,11 @@ describe("PeriodDataService", () => {
 			const storage = new MockStatsStorage({}, hourlyStats);
 			const service = new PeriodDataService(storage as any);
 
-			const stats = await service.getPeriodStats("4hours", "novel");
-			// 固定4時間ブロック (08-11) を使用するため、08,09,10,11 の4時間分
-			expect(stats.total).toBe(900);
-			expect(stats.average).toBe(300);
-			expect(stats.periodLabel).toBe("4時間");
+			const stats = await service.getPeriodStats("24hours", "novel");
+			// 24時間表示では当日の全時間を合算する
+			expect(stats.total).toBe(1000);
+			expect(stats.average).toBe(250);
+			expect(stats.periodLabel).toBe("24時間");
 		});
 
 		test("should return correct stats for day", async () => {
@@ -146,7 +146,7 @@ describe("PeriodDataService", () => {
 	});
 
 	describe("getChartData", () => {
-		test("should return 4 time slots for 4hours view", async () => {
+		test("should return 24 time slots for 24hours view", async () => {
 			// 時間を 10:00 に設定
 			vi.setSystemTime(new Date(2025, 9, 2, 10, 0, 0));
 
@@ -159,12 +159,14 @@ describe("PeriodDataService", () => {
 			const storage = new MockStatsStorage({}, hourlyStats);
 			const service = new PeriodDataService(storage as any);
 
-			const chartData = await service.getChartData("4hours", "novel");
-			expect(chartData).toHaveLength(4);
-			expect(chartData[0].label).toBe("8h");
-			expect(chartData[0].value).toBe(200);
-			expect(chartData[3].label).toBe("11h");
-			expect(chartData[3].value).toBe(0);
+			const chartData = await service.getChartData("24hours", "novel");
+			expect(chartData).toHaveLength(24);
+			// 指定した時間帯（7-10）の値が対応するインデックスに入っていること
+			expect(chartData[7].label).toBe("7h");
+			expect(chartData[7].value).toBe(100);
+			expect(chartData[8].value).toBe(200);
+			expect(chartData[9].value).toBe(300);
+			expect(chartData[10].value).toBe(400);
 		});
 
 		test("should return 6 time slots for day view", async () => {

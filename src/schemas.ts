@@ -3,7 +3,7 @@ import * as v from "valibot";
 /**
  * 期間タイプのスキーマ
  */
-export const PeriodTypeSchema = v.picklist(["4hours", "day", "week", "month", "year"]);
+export const PeriodTypeSchema = v.picklist(["24hours", "day", "week", "month", "year"]);
 
 /**
  * 期間設定のスキーマ
@@ -119,10 +119,10 @@ export type PluginData = v.InferOutput<typeof PluginDataSchema>;
  * 期間設定の定数
  */
 export const PERIOD_CONFIGS: Record<PeriodType, PeriodConfig> = {
-	"4hours": {
-		type: "4hours",
-		label: "4時間",
-		shortLabel: "四",
+	"24hours": {
+		type: "24hours",
+		label: "24時間",
+		shortLabel: "24",
 	},
 	day: {
 		type: "day",

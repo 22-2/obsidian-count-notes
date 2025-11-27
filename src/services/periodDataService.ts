@@ -36,7 +36,7 @@ export class PeriodDataService {
 		const hourlyStats = await this.statsStorage.getHourlyStatsByDateRange(startDate, endDate, tag);
 
 		const statsCalculators = {
-			"4hours": () => this.getFourHoursStats(dailyStats, hourlyStats),
+			"24hours": () => this.get24HoursStats(dailyStats, hourlyStats),
 			day: () => this.getDayStats(dailyStats, hourlyStats),
 			week: () => this.getWeekStats(dailyStats),
 			month: () => this.getMonthStats(dailyStats),
@@ -57,7 +57,7 @@ export class PeriodDataService {
 		const hourlyStats = await this.statsStorage.getHourlyStatsByDateRange(startDate, endDate, tag);
 
 		const chartDataGenerators = {
-			"4hours": () => this.getFourHoursChartData(hourlyStats),
+			"24hours": () => this.get24HoursChartData(hourlyStats),
 			day: () => this.getDayChartData(hourlyStats),
 			week: () => this.getWeekChartData(dailyStats),
 			month: () => this.getMonthChartData(dailyStats),
@@ -74,12 +74,12 @@ export class PeriodDataService {
 
 	private getDateRange(periodType: PeriodType): { startDate: string; endDate: string } {
 		const today = new Date();
-		switch (periodType) {
-			case "4hours": {
-				// 固定区切りの4時間ブロックは同一日の範囲で十分（00-03,04-07,...,20-23）
-				const todayStr = this.formatDateString(today);
-				return { startDate: todayStr, endDate: todayStr };
-			}
+			switch (periodType) {
+				case "24hours": {
+					// 24時間表示は当日の全時間（00-23）を扱うため同一日の範囲で十分
+					const todayStr = this.formatDateString(today);
+					return { startDate: todayStr, endDate: todayStr };
+				}
 			case "day": {
 				const todayStr = this.formatDateString(today);
 				return { startDate: todayStr, endDate: todayStr };
@@ -520,30 +520,23 @@ export class PeriodDataService {
 		return `${year}-${monthStr}-${dayStr}`;
 	}
 
-	private getFourHoursStats(
+	private get24HoursStats(
 		dailyStats: DailyStats,
 		hourlyStats: HourlyStats
 	): PeriodStats {
 		if (!hourlyStats) {
-			return this.createEmptyStats("4時間");
+			return this.createEmptyStats("24時間");
 		}
 
-		// 現在時刻に属する「固定された」4時間ブロックを計算する
-		const now = new Date();
-		const slotStart = Math.floor(now.getHours() / PeriodDataService.HOURS_PER_SLOT) * PeriodDataService.HOURS_PER_SLOT;
+		// 当日の全24時間（00-23）を集計する
+		const today = new Date();
+		const todayString = this.formatDateString(today);
 		let total = 0;
 		let activeHours = 0;
 
-		for (let offset = 0; offset < PeriodDataService.HOURS_PER_SLOT; offset++) {
-			const hour = slotStart + offset;
-			const targetTime = new Date(now);
-			targetTime.setHours(hour);
-
-			const dateString = this.formatDateString(targetTime);
-			const hourString = this.formatHour(targetTime.getHours());
-			const timeSlotKey = `${dateString}-${hourString}`;
-
-			const count = hourlyStats[timeSlotKey] || 0;
+		for (let h = 0; h < 24; h++) {
+			const key = `${todayString}-${this.formatHour(h)}`;
+			const count = hourlyStats[key] || 0;
 			total += count;
 			if (count > 0) activeHours++;
 		}
@@ -555,32 +548,22 @@ export class PeriodDataService {
 			total,
 			average,
 			streak,
-			periodLabel: "4時間",
+			periodLabel: "24時間",
 		};
 	}
 
-	private getFourHoursChartData(hourlyStats: HourlyStats): ChartDataPoint[] {
-		const now = new Date();
+	private get24HoursChartData(hourlyStats: HourlyStats): ChartDataPoint[] {
 		const chartData: ChartDataPoint[] = [];
+		const today = new Date();
+		const dateString = this.formatDateString(today);
 
-		// 現在が属する固定4時間ブロックの開始時刻
-		const slotStart = Math.floor(now.getHours() / PeriodDataService.HOURS_PER_SLOT) * PeriodDataService.HOURS_PER_SLOT;
-
-		for (let offset = 0; offset < PeriodDataService.HOURS_PER_SLOT; offset++) {
-			const hour = slotStart + offset;
-			const targetTime = new Date(now);
-			targetTime.setHours(hour);
-
-			const dateString = this.formatDateString(targetTime);
-			const hourString = this.formatHour(targetTime.getHours());
-			const timeSlotKey = `${dateString}-${hourString}`;
-
-			const count = hourlyStats?.[timeSlotKey] || 0;
-
+		for (let hour = 0; hour < 24; hour++) {
+			const key = `${dateString}-${this.formatHour(hour)}`;
+			const count = hourlyStats?.[key] || 0;
 			chartData.push({
-				label: `${targetTime.getHours()}h`,
+				label: `${hour}h`,
 				value: count,
-				date: timeSlotKey,
+				date: key,
 			});
 		}
 

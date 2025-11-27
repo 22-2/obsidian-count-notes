@@ -154,7 +154,7 @@
 }
 
 /* When the chart content (container) has enough height, show the clock and scale font-size */
-@container (min-height: 420px) {
+@container (min-height: 500px) {
 	.count-novels-clock {
 		display: block;
 		/* scale font size aggressively to fill available vertical space; clamp wide */
@@ -169,7 +169,7 @@
 }
 
 /* Slightly smaller breakpoint to still show clock when moderate height */
-@container (min-height: 300px) and (max-width: 900px) {
+@container (min-height: 500px) and (max-width: 900px) {
 	.count-novels-clock {
 		display: block;
 		/* slightly smaller scale for narrow viewports, but still large */

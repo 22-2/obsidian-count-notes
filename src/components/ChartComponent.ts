@@ -284,24 +284,41 @@ function createXAxisConfig(colors: ThemeColors, periodType: PeriodType) {
 	const config: any = {
 		type: "category",
 		ticks: {
-			color: (ctx: any) => {
-				try {
-					const labels = ctx.chart?.data?.labels || [];
-					const isLast = typeof ctx.index === "number" && ctx.index === labels.length - 1;
-					return isLast ? colors.positiveBorder : colors.textSecondary;
-				} catch (e) {
-					return colors.textSecondary;
-				}
-			},
-			font: (ctx: any) => {
-				try {
-					const labels = ctx.chart?.data?.labels || [];
-					const isLast = typeof ctx.index === "number" && ctx.index === labels.length - 1;
-					return { size: 13, weight: isLast ? "700" : "400" };
-				} catch (e) {
-					return { size: 11, weight: "400" };
-				}
-			},
+			// color: (ctx: any) => {
+			// 	try {
+			// 		// ホバー/ツールチップでアクティブな要素を取得
+			// 		const activeElements =
+			// 			typeof ctx.chart.getActiveElements === "function"
+			// 				? (ctx.chart.getActiveElements() as any[])
+			// 				: ctx.chart?.tooltip?._active || [];
+					
+			// 		const activeIndex = Array.isArray(activeElements) && activeElements.length > 0 ? activeElements[0].index : null;
+					
+			// 		// 修正箇所: activeIndex が null (ホバーなし) の場合は何もハイライトしないように変更
+			// 		const isHighlighted = (typeof ctx.index === "number") && (activeIndex !== null && ctx.index === activeIndex);
+					
+			// 		return isHighlighted ? colors.positiveBorder : colors.textSecondary;
+			// 	} catch (e) {
+			// 		return colors.textSecondary;
+			// 	}
+			// },
+			// font: (ctx: any) => {
+			// 	try {
+			// 		const activeElements =
+			// 			typeof ctx.chart.getActiveElements === "function"
+			// 				? (ctx.chart.getActiveElements() as any[])
+			// 				: ctx.chart?.tooltip?._active || [];
+
+			// 		const activeIndex = Array.isArray(activeElements) && activeElements.length > 0 ? activeElements[0].index : null;
+					
+			// 		// 修正箇所: 同様にフォントサイズ変更のロジックも修正
+			// 		const isHighlighted = (typeof ctx.index === "number") && (activeIndex !== null && ctx.index === activeIndex);
+					
+			// 		return { size: 13, weight: isHighlighted ? "700" : "400" };
+			// 	} catch (e) {
+			// 		return { size: 11, weight: "400" };
+			// 	}
+			// },
 			maxRotation: 0,
 			minRotation: 0,
 		},
@@ -359,6 +376,9 @@ function getMaxTicksLimit(periodType: PeriodType): number | undefined {
 		case "year":
 			return 4;
 		case "month":
+			return undefined;
+		case "24hours":
+			return 24;
 		default:
 			return undefined;
 	}
