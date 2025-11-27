@@ -35,6 +35,8 @@ export default class CountNovelsPlugin extends Plugin {
 		}
 	}
 
+
+
 	private async initializeServices(): Promise<void> {
 		this.dataStorage = new DataStorage(this);
 		this.statsStorage = new StatsStorage();

@@ -1,10 +1,14 @@
 /* Count Novels Plugin Styles */
 
+/* Load Montserrat via Google Fonts (fallback handled by browser) */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap');
+
+
 /* メインコンテナ */
 .count-novels-main {
 	padding: var(--size-4-2);
 	width: 100%;
-	height: 100%;
+	/* height: 100%; */
 	overflow-y: auto;
 }
 
@@ -115,6 +119,20 @@
 .count-novels-chart-content {
 	min-height: 300px;
 	position: relative;
+}
+
+/* Clock shown under chart/view */
+.count-novels-clock {
+	font-family: Montserrat, Roboto, Arial, Helvetica, sans-serif;
+	color: #c8c3bc;
+	text-align: center;
+	line-height: 1;
+	display: block;
+	/* Use tabular numbers for uniform digit widths */
+	font-variant-numeric: tabular-nums;
+	-webkit-font-variant-numeric: tabular-nums;
+	-moz-font-variant-numeric: tabular-nums;
+	pointer-events: none;
 }
 
 .count-novels-chart-canvas {

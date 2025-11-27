@@ -1,5 +1,6 @@
 import { ItemView, Setting, WorkspaceLeaf, type ViewStateResult } from "obsidian";
 import { ChartComponent } from "./components/ChartComponent";
+import { ClockComponent } from "./components/ClockComponent";
 import { StatsComponent } from "./components/StatsComponent";
 import { TabComponent } from "./components/TabComponent";
 import type CountNovelsPlugin from "./main";
@@ -17,6 +18,7 @@ export class CountNovelView extends ItemView {
 	private statsComponent?: StatsComponent;
 	private chartComponent?: ChartComponent;
 	private periodDataService?: PeriodDataService;
+	private clockComponent?: ClockComponent;
 	private currentPeriod: PeriodType = "month";
 	private currentTag: string = "novel";
 
@@ -90,6 +92,10 @@ export class CountNovelView extends ItemView {
 		this.tabComponent = undefined;
 		this.statsComponent = undefined;
 		this.periodDataService = undefined;
+		if (this.clockComponent) {
+			this.clockComponent.destroy();
+			this.clockComponent = undefined;
+		}
 	}
 
 	public async renderView(): Promise<void> {
@@ -183,6 +189,12 @@ export class CountNovelView extends ItemView {
 				"count-novels-chart-content"
 			);
 			this.createChartComponent(chartContent);
+
+			// 時計コンポーネントを mainContainer の直下にマウント（チャートではなくビュー全体の下に表示）
+			if (!this.clockComponent) {
+				this.clockComponent = new ClockComponent(container, 220, false);
+				this.clockComponent.mount();
+			}
 
 			await this.updateContent();
 		} catch (error) {
