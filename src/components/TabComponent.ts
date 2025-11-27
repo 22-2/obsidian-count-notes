@@ -24,6 +24,7 @@ export class TabComponent {
 
 		// タブボタンを作成
 		Object.values(PERIOD_CONFIGS).forEach((config) => {
+			if (config.label === "day") return; // "day" タブは表示しない
 			const tabButton = tabContainer.createEl("button", {
 				text: config.shortLabel,
 				cls: "count-novels-tab-button",
