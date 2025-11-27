@@ -130,7 +130,8 @@ export class DataStorage {
 	 * 期間タイプをバリデーションする
 	 */
 	private validatePeriod(period: PeriodType): void {
-		const validPeriods: PeriodType[] = ["day", "week", "month", "year"];
+		// PeriodType に合わせて "24hours" を許可する
+		const validPeriods: PeriodType[] = ["24hours", "day", "week", "month", "year"];
 		if (!validPeriods.includes(period)) {
 			throw new Error(`Invalid period: ${period}`);
 		}
