@@ -125,6 +125,11 @@ interface ThemeColors {
 	tooltipBorder: string;
 	positiveColor: string;
 	positiveBorder: string;
+	negativeColor: string;
+	negativeBorder: string;
+	fadedColor: string;
+	fadedNegativeColor: string;
+	fadedNegativeBorder: string;
 }
 
 function getThemeColors(): ThemeColors {
@@ -140,6 +145,11 @@ function getThemeColors(): ThemeColors {
 		tooltipBorder: getVar("--background-modifier-border"),
 		positiveColor: `rgba(${getVar("--color-green-rgb")}, 0.7)`,
 		positiveBorder: `rgb(${getVar("--color-green-rgb")})`,
+		negativeColor: `rgba(${getVar("--color-red-rgb")}, 0.85)`,
+		negativeBorder: `rgb(${getVar("--color-red-rgb")})`,
+		fadedColor: `rgba(${getVar("--color-green-rgb")}, 0.25)`,
+		fadedNegativeColor: `rgba(${getVar("--color-red-rgb")}, 0.28)`,
+		fadedNegativeBorder: `rgba(${getVar("--color-red-rgb")}, 0.38)`,
 	};
 }
 
@@ -182,8 +192,35 @@ function convertToChartJsData(
 			{
 				label: "",
 				data: chartData.map((point) => point.value),
-				backgroundColor: colors.positiveColor,
-				borderColor: colors.positiveBorder,
+				// scriptable colors: 負の値は赤、最新は強調、その他は淡色
+				backgroundColor: (ctx: any) => {
+					try {
+						const val = typeof ctx.parsed?.y === 'number' ? ctx.parsed.y : ctx.raw ?? 0;
+						const labels = ctx.chart?.data?.labels || [];
+						const isLast = typeof ctx.dataIndex === "number" && ctx.dataIndex === labels.length - 1;
+						if (val < 0) {
+							return !isLast ? colors.fadedNegativeColor : colors.negativeColor;
+						}
+						if (!isLast) return colors.fadedColor;
+						return colors.positiveColor;
+					} catch (e) {
+						return colors.fadedColor;
+					}
+				},
+				borderColor: (ctx: any) => {
+					try {
+						const val = typeof ctx.parsed?.y === 'number' ? ctx.parsed.y : ctx.raw ?? 0;
+						const labels = ctx.chart?.data?.labels || [];
+						const isLast = typeof ctx.dataIndex === "number" && ctx.dataIndex === labels.length - 1;
+						if (val < 0) {
+							return !isLast ? colors.fadedNegativeBorder : colors.negativeBorder;
+						}
+						if (!isLast) return 'rgba(0,0,0,0)';
+						return colors.positiveBorder;
+					} catch (e) {
+						return 'rgba(0,0,0,0)';
+					}
+				},
 				borderWidth: 2,
 				categoryPercentage: 0.9,
 				barPercentage: 0.8,
@@ -251,8 +288,27 @@ function createXAxisConfig(colors: ThemeColors, periodType: PeriodType) {
 	const config: any = {
 		type: "category",
 		ticks: {
-			color: colors.textSecondary,
-			font: { size: 11 },
+			// scriptable ticks: 最新（最後）のラベルをより明るく目立たせる
+			color: (ctx: any) => {
+				try {
+					const labels = ctx.chart?.data?.labels || [];
+					const isLast = typeof ctx.index === "number" && ctx.index === labels.length - 1;
+					// positiveBorder は不透明で目立つ色（RGB文字列）なので強調に使用
+					return isLast ? colors.positiveBorder : colors.textSecondary;
+				} catch (e) {
+					return colors.textSecondary;
+				}
+			},
+			font: (ctx: any) => {
+				try {
+					const labels = ctx.chart?.data?.labels || [];
+					const isLast = typeof ctx.index === "number" && ctx.index === labels.length - 1;
+					// サイズをやや大きく、ウェイトを数値で指定してより太字にする
+					return { size: 13, weight: isLast ? "700" : "400" };
+				} catch (e) {
+					return { size: 11, weight: "400" };
+				}
+			},
 			maxRotation: 0,
 			minRotation: 0,
 		},
