@@ -95,6 +95,30 @@ export class StatsComponent {
 				"日"
 			);
 		}
+
+		// 24時間表示向けのサマリーを追加
+		if (periodType === "24hours") {
+			this.createSummaryItem(
+				summaryContent,
+				"直近24時間の合計",
+				stats.total.toLocaleString(),
+				"文字"
+			);
+			if (stats.average !== 0) {
+				this.createSummaryItem(
+					summaryContent,
+					"1時間の平均",
+					stats.average.toLocaleString(),
+					"文字"
+				);
+			}
+			this.createSummaryItem(
+				summaryContent,
+				"継続日数",
+				stats.streak.toString(),
+				"日"
+			);
+		}
 	}
 
 	private createSummaryItem(
