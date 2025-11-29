@@ -1,19 +1,15 @@
-import { TFile } from "obsidian";
+import { TFile, Notice } from "obsidian";
 import { splitMd } from "src/utils/markdwon";
 import type CountNovelsPlugin from "../main";
 import { VIEW_TYPE_COUNT_NOVEL } from "../utils/constants";
 import type { StatsStorage } from "./statsStorage";
 import log from "loglevel";
-// @ts-ignore - inline worker plugin provides factory for .worker.ts
+// @ts-ignore
 import CountWorker from "../workers/count.worker.ts";
 import { isPathInExcludedFolders } from "src/utils/excludedFolders";
 
 const logger = log.getLogger("DataCollectionService");
 
-/**
- * データ収集サービス
- * ファイルスキャンと文字数集計機能を提供
- */
 export class DataCollectionService {
 	private countWorker?: Worker;
 	private pendingResponses: Map<string, (n: number) => void> = new Map();
@@ -28,338 +24,165 @@ export class DataCollectionService {
 
 	private setupWorker(): void {
 		try {
-			// factory returns a Worker instance
 			const factory = CountWorker;
-			const workerInstance = factory();
-			this.countWorker = workerInstance;
+			this.countWorker = factory();
+			
 			if (this.countWorker) {
 				this.countWorker.onmessage = (ev: MessageEvent) => {
-				const data = ev.data;
-				if (!data) return;
+					const data = ev.data;
+					if (!data) return;
 
-				if (data.results && Array.isArray(data.results)) {
-					for (const r of data.results) {
-						const resolver = this.pendingResponses.get(r.id);
+					if (data.results && Array.isArray(data.results)) {
+						for (const r of data.results) {
+							const resolver = this.pendingResponses.get(r.id);
+							if (resolver) {
+								resolver(r.count);
+								this.pendingResponses.delete(r.id);
+							}
+						}
+						return;
+					}
+
+					if (data.id && typeof data.count === "number") {
+						const resolver = this.pendingResponses.get(data.id);
 						if (resolver) {
-							resolver(r.count);
-							this.pendingResponses.delete(r.id);
+							resolver(data.count);
+							this.pendingResponses.delete(data.id);
 						}
 					}
-					return;
-				}
-
-				if (data.id && typeof data.count === "number") {
-					const resolver = this.pendingResponses.get(data.id);
-					if (resolver) {
-						resolver(data.count);
-						this.pendingResponses.delete(data.id);
-					}
-				}
 				};
 			}
 		} catch (e) {
-			// Worker creation failed; will fallback to main-thread counting
-			logger.warn("Count Novels: count worker creation failed, falling back to main-thread counts", e);
+			const msg = "Count Novels: Worker initialization failed.";
+			new Notice(msg);
+			logger.error(msg, e);
 			this.countWorker = undefined;
 		}
 	}
 
-	/**
-	 * 指定タグを持つファイルを検索する機能
-	 * 要件2.1: 指定タグを持つ全ファイルの合計文字数を計算する
-	 */
 	async findFilesWithTag(tag: string): Promise<TFile[]> {
-		if (!this.isValidTag(tag)) {
-			logger.warn("Count Novels: Empty tag provided for file search");
-			return [];
-		}
+		if (!tag?.trim()) return [];
 
 		const files = this.plugin.app.vault.getMarkdownFiles();
-		const excludedFolders = this.plugin.settings.excludedFolders;
-		logger.log(
-			`Count Novels: Scanning ${files.length} markdown files for tag "${tag}"`
-		);
+		const excluded = this.plugin.settings.excludedFolders;
 
-		const taggedFiles = files.filter((file) => {
-			if (this.shouldExclude(file, excludedFolders)) {
+		return files.filter((file) => {
+			if (excluded.length && isPathInExcludedFolders(file.path, excluded)) {
 				return false;
 			}
 			return this.hasTag(file, tag);
 		});
-
-		logger.log(
-			`Count Novels: Found ${taggedFiles.length} files with tag "${tag}"`
-		);
-		return taggedFiles;
 	}
 
-	/**
-	 * タグの妥当性をチェック
-	 */
-	private isValidTag(tag: string): boolean {
-		return tag?.trim() !== "";
-	}
-
-	/**
-	 * ファイルが指定タグを持つかチェック
-	 */
 	private hasTag(file: TFile, tag: string): boolean {
 		try {
 			const cache = this.plugin.app.metadataCache.getFileCache(file);
+			if (!cache) return false;
 
-			if (this.hasInlineTag(cache, tag)) {
-				logger.log(
-					`Count Novels: Found tag "${tag}" in file: ${file.path}`
-				);
-				return true;
-			}
+			// Inline tags (#novel)
+			if (cache.tags?.some((t) => t.tag === `#${tag}`)) return true;
 
-			if (this.hasFrontmatterTag(cache, tag)) {
-				logger.log(
-					`Count Novels: Found tag "${tag}" in frontmatter of file: ${file.path}`
-				);
-				return true;
+			// Frontmatter tags (tags: [novel])
+			const fmTags = cache.frontmatter?.tags;
+			if (fmTags) {
+				return (Array.isArray(fmTags) ? fmTags : [fmTags]).includes(tag);
 			}
 
 			return false;
-		} catch (error) {
-			logger.warn(
-				`Count Novels: Error checking tags for file ${file.path}:`,
-				error
-			);
+		} catch (e) {
+			logger.warn(`Error checking tags for ${file.path}`, e);
 			return false;
 		}
 	}
 
-	private shouldExclude(file: TFile, excludedFolders: string[]): boolean {
-		if (!excludedFolders.length) {
-			return false;
-		}
-
-		const inExcluded = isPathInExcludedFolders(file.path, excludedFolders);
-		if (inExcluded) {
-			logger.log(
-				`Count Novels: Skipping file in excluded folder (${file.path})`
-			);
-		}
-		return inExcluded;
-	}
-
-	/**
-	 * インラインタグをチェック (#novel形式)
-	 */
-	private hasInlineTag(cache: any, tag: string): boolean {
-		return (
-			cache?.tags?.some((tagRef: any) => tagRef.tag === `#${tag}`) ??
-			false
-		);
-	}
-
-	/**
-	 * フロントマタータグをチェック (tags: [novel]形式)
-	 */
-	private hasFrontmatterTag(cache: any, tag: string): boolean {
-		const frontmatterTags = cache?.frontmatter?.tags;
-		if (!frontmatterTags) return false;
-
-		const tags = Array.isArray(frontmatterTags)
-			? frontmatterTags
-			: [frontmatterTags];
-		return tags.includes(tag);
-	}
-
-	/**
-	 * ファイル内容から文字数をカウントする機能
-	 * 要件2.2: 文字数を計算する
-	 */
 	async countCharactersInFile(file: TFile): Promise<number> {
+		// Worker必須: 存在しない場合はNoticeを出して停止
+		if (!this.countWorker) {
+			const msg = "Count Novels: Worker is not active. Processing stopped.";
+			new Notice(msg);
+			throw new Error(msg);
+		}
+
 		try {
 			const content = await this.plugin.app.vault.cachedRead(file);
 			const { content: markdownContent } = splitMd(content);
+			const id = `c_${++this.idCounter}_${Date.now()}`;
 
-			if (this.countWorker) {
-				const id = `c_${++this.idCounter}_${Date.now()}`;
-				return new Promise<number>((resolve) => {
-					this.pendingResponses.set(id, resolve);
-					try {
-						this.countWorker!.postMessage({ id, content: markdownContent });
-					} catch (e) {
-						// postMessage failed; fallback to main-thread count
-						this.pendingResponses.delete(id);
-						const cleaned = markdownContent.replace(/[\s\u3000]+/g, "");
-						resolve(cleaned.length);
-					}
-				});
-			}
-
-			// Fallback: main-thread count
-			const cleaned = markdownContent.replace(/[\s\u3000]+/g, "");
-			return cleaned.length;
+			return new Promise<number>((resolve) => {
+				this.pendingResponses.set(id, resolve);
+				this.countWorker!.postMessage({ id, content: markdownContent });
+			});
 		} catch (error) {
-			logger.warn(
-				`Count Novels: Error reading file ${file.path}:`,
-				error
-			);
+			logger.error(`Error processing file ${file.path}:`, error);
 			return 0;
 		}
 	}
 
-	/**
-	 * 合計文字数を計算する機能
-	 * 要件2.1, 2.2: 指定タグを持つ全ファイルの合計文字数を計算する
-	 */
 	async calculateTotalCharacterCount(tag: string): Promise<number> {
-		try {
-			const taggedFiles = await this.findFilesWithTag(tag);
+		const files = await this.findFilesWithTag(tag);
+		const concurrency = 6;
+		let total = 0;
 
-			// Process files in chunks to avoid flooding the event loop
-			const concurrency = 6;
-			let totalCount = 0;
-			for (let i = 0; i < taggedFiles.length; i += concurrency) {
-				const chunk = taggedFiles.slice(i, i + concurrency);
-				const counts = await Promise.all(chunk.map((file) => this.countCharactersInFile(file)));
-				totalCount += counts.reduce((s, c) => s + c, 0);
-				// allow event loop to process UI tasks
-				await new Promise((r) => setTimeout(r, 0));
-			}
-
-			logger.log(
-				`Count Novels: Total character count for tag "${tag}": ${totalCount}`
-			);
-			return totalCount;
-		} catch (error) {
-			logger.error(
-				`Count Novels: Error calculating total character count for tag "${tag}":`,
-				error
-			);
-			return 0;
+		for (let i = 0; i < files.length; i += concurrency) {
+			const chunk = files.slice(i, i + concurrency);
+			const counts = await Promise.all(chunk.map((f) => this.countCharactersInFile(f)));
+			total += counts.reduce((sum, c) => sum + c, 0);
+			await new Promise((r) => setTimeout(r, 0)); // UIブロック防止
 		}
+		
+		logger.log(`Total for "${tag}": ${total}`);
+		return total;
 	}
 
-	/**
-	 * データ収集を実行する(メイン機能)
-	 * 要件2.1, 2.2: システムは指定タグを持つ全ファイルの合計文字数を計算する
-	 */
 	async collectData(): Promise<void> {
-		try {
-			const tags = this.plugin.settings.trackingTags;
-			if (!tags || tags.length === 0) {
-				logger.warn("Count Novels: No tracking tags configured.");
-				return;
-			}
+		const tags = this.plugin.settings.trackingTags;
+		if (!tags?.length) return;
 
+		try {
 			for (const tag of tags) {
 				await this.collectDataForTag(tag);
 			}
-
 			this.refreshViews();
 		} catch (error) {
-			logger.error("Count Novels: Error during data collection:", error);
+			logger.error("Data collection stopped due to error:", error);
 		}
 	}
 
 	private async collectDataForTag(tag: string): Promise<void> {
-		try {
-			const currentTotal = await this.calculateTotalCharacterCount(tag);
-			const previousTotal =
-				await this.statsStorage.getLastTotalCharacterCount(tag);
+		const currentTotal = await this.calculateTotalCharacterCount(tag);
+		const previousTotal = await this.statsStorage.getLastTotalCharacterCount(tag);
 
-			if (previousTotal === null) {
-				logger.log(
-					`Count Novels: First run detected for tag "${tag}". Initializing total count to ${currentTotal}. No stats recorded.`
-				);
-				await this.statsStorage.saveLastTotalCharacterCount(currentTotal, tag);
-				return;
-			}
-
-			const difference = currentTotal - previousTotal;
-
-			logger.log(
-				`Count Novels: Tag "${tag}" - Previous total: ${previousTotal}, Current total: ${currentTotal}, Difference: ${difference}`
-			);
-
-			// 差分が0でも currentTotal は保存する（初回データ収集の場合など）
+		// 初回実行時
+		if (previousTotal === null) {
 			await this.statsStorage.saveLastTotalCharacterCount(currentTotal, tag);
+			logger.log(`Initialized stats for "${tag}" at ${currentTotal}`);
+			return;
+		}
 
-			// 差分が0の場合のみ統計を保存しない
-			if (difference === 0) {
-				logger.log(`Count Novels: No change in character count for tag "${tag}".`);
-				return;
-			}
+		const diff = currentTotal - previousTotal;
+		await this.statsStorage.saveLastTotalCharacterCount(currentTotal, tag);
 
-			const today = this.getTodayString();
-			await this.saveDailyAndHourlyStats(today, difference, tag);
-
-			if (difference > 0) {
-				logger.log(
-					`Count Novels: Data collection completed for tag "${tag}". Recorded ${difference} characters for ${today}`
-				);
-			} else {
-				logger.log(
-					`Count Novels: Character count decreased by ${Math.abs(difference)} for tag "${tag}". Adjusted stats for ${today}`
-				);
-			}
-		} catch (error) {
-			logger.error(`Count Novels: Error collecting data for tag "${tag}":`, error);
+		if (diff !== 0) {
+			const today = new Date().toISOString().split("T")[0];
+			await Promise.all([
+				this.statsStorage.updateDailyStats(today, diff, tag),
+				this.statsStorage.updateHourlyStats(today, diff, tag),
+			]);
+			logger.log(`Tag "${tag}": Updated stats. Diff: ${diff}`);
 		}
 	}
 
-	/**
-	 * 今日の日付を YYYY-MM-DD 形式で取得
-	 */
-	private getTodayString(): string {
-		const now = new Date();
-		const year = now.getFullYear();
-		const month = String(now.getMonth() + 1).padStart(2, "0");
-		const day = String(now.getDate()).padStart(2, "0");
-		return `${year}-${month}-${day}`;
-	}
-
-	/**
-	 * 統計データを保存（日次・時間別のみ）
-	 */
-	private async saveDailyAndHourlyStats(
-		date: string,
-		difference: number,
-		tag: string
-	): Promise<void> {
-		await Promise.all([
-			this.statsStorage.updateDailyStats(date, difference, tag),
-			this.statsStorage.updateHourlyStats(date, difference, tag),
-		]);
-	}
-
-	/**
-	 * データ更新時にビューを更新する機能
-	 * 要件: データ更新時にサマリーとグラフを再描画する
-	 */
 	private refreshViews(): void {
 		this.plugin.app.workspace.iterateAllLeaves((leaf) => {
 			if (leaf.view.getViewType() === VIEW_TYPE_COUNT_NOVEL) {
-				this.refreshView(leaf.view);
+				const view = leaf.view as any;
+				if (typeof view.refreshStats === "function") {
+					view.refreshStats();
+				} else {
+					view.refreshSummary?.();
+					view.refreshChart?.();
+				}
 			}
 		});
-	}
-
-	/**
-	 * 個別のビューを更新
-	 */
-	private refreshView(view: any): void {
-		if (typeof view.refreshStats === "function") {
-			view.refreshStats();
-		} else {
-			// フォールバック: 個別メソッドを呼び出し
-			this.callIfExists(view, "refreshSummary");
-			this.callIfExists(view, "refreshChart");
-		}
-	}
-
-	/**
-	 * メソッドが存在する場合のみ呼び出す
-	 */
-	private callIfExists(obj: any, methodName: string): void {
-		if (typeof obj[methodName] === "function") {
-			obj[methodName]();
-		}
 	}
 }
