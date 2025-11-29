@@ -187,13 +187,16 @@ export class CountNovelView extends ItemView {
 
 private async renderMainInterface(container: HTMLElement): Promise<void> {
 		try {
-			const tabSection = container.createDiv("count-novels-tabs-section");
+			// Wrap tab / summary / chart sections in a single container
+			const wrapper = container.createDiv("count-novels-wrapper");
+
+			const tabSection = wrapper.createDiv("count-novels-tabs-section");
 			this.createTabComponent(tabSection);
 
-			const summarySection = container.createDiv("count-novels-summary");
+			const summarySection = wrapper.createDiv("count-novels-summary");
 			this.createStatsComponent(summarySection);
 
-			const chartSection = container.createDiv("count-novels-chart");
+			const chartSection = wrapper.createDiv("count-novels-chart");
 			const chartContent = chartSection.createDiv(
 				"count-novels-chart-content"
 			);
