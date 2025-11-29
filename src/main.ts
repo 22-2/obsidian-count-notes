@@ -165,27 +165,40 @@ function setupAndStartWorker(plugin: CountNovelsPlugin): void {
 				);
 			} else if (data.type === "status") {
 				plugin.updateStatusBar();
+			} else if (data.type === "tick") {
+				const now = typeof data.now === 'number' ? data.now : Date.now();
+				// forward tick to all CountNovelView instances
+				plugin.app.workspace.iterateAllLeaves((leaf) => {
+					try {
+						if (leaf.view.getViewType() === VIEW_TYPE_COUNT_NOVEL) {
+							const view = leaf.view as any;
+							if (typeof view.handleTick === 'function') {
+								view.handleTick(now);
+							}
+						}
+					} catch (_e) {
+						// ignore per-leaf errors
+					}
+				});
 			}
 		};
 
-		// 計測開始
+		// 計測開始（tickInterval を追加）
 		plugin.schedulerWorker.postMessage({
 			cmd: "start",
 			collectInterval: COLLECTION_INTERVAL,
 			statusInterval: STATUS_BAR_UPDATE_INTERVAL,
+			tickInterval: 1000,
 		});
 
 		log.log("Count Novels: Scheduler worker started.");
-
 	} catch (e) {
-		// Fallbackなし。エラーを出して停止。
 		const msg = "Count Novels: Critical Error - Scheduler Worker failed to start.";
 		log.error(msg, e);
-		new Notice(msg);
+		try { new Notice(msg); } catch (_e) {}
 		plugin.schedulerWorker = undefined;
 	}
 }
-
 function migrateSettings(loadedSettings: any): any {
 	if (!loadedSettings) return loadedSettings;
 	if (loadedSettings.trackingTag && !loadedSettings.trackingTags) {

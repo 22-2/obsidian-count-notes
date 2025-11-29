@@ -213,7 +213,9 @@ private async renderMainInterface(container: HTMLElement): Promise<void> {
 			}
 			
 			// 条件分岐(if)を外し、常に新しいコンテナ(container)に対して時計を作成する
-			this.clockComponent = new ClockComponent(container);
+			// If a scheduler worker exists, prefer external ticks; otherwise allow worker/interval fallback inside component
+			const useWorkerFallback = !this.plugin.schedulerWorker;
+			this.clockComponent = new ClockComponent(container, useWorkerFallback);
 			this.clockComponent.mount();
 			// --- 修正箇所ここまで ---
 
@@ -224,6 +226,12 @@ private async renderMainInterface(container: HTMLElement): Promise<void> {
 				error
 			);
 			this.renderErrorMessage();
+		}
+	}
+
+	public handleTick(now?: number): void {
+		if (this.clockComponent) {
+			this.clockComponent.handleTick(now);
 		}
 	}
 

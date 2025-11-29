@@ -1,6 +1,4 @@
 import log from "loglevel";
-// @ts-ignore: inline-worker plugin provides a default factory for .worker.ts imports
-import ClockWorker from "../workers/clock.worker.ts";
 
 const logger = log.getLogger("ClockComponent");
 
@@ -16,9 +14,11 @@ export class ClockComponent {
     private timeEl?: HTMLElement;
     private worker?: Worker;
     private intervalId?: number;
+    private useWorkerFallback: boolean;
 
-    constructor(container: HTMLElement) {
+    constructor(container: HTMLElement, useWorkerFallback = true) {
         this.container = container;
+        this.useWorkerFallback = useWorkerFallback;
     }
 
     public mount(): void {
@@ -29,28 +29,10 @@ export class ClockComponent {
         } as Partial<CSSStyleDeclaration>);
 
         this.timeEl.textContent = formatTime(new Date());
-        this.setupWorker();
-    }
 
-    private setupWorker(): void {
-        try {
-            // The inline-worker plugin exposes a factory that returns a Worker instance
-            // TypeScript declaration for '*.worker.ts' is provided in src/types/worker.d.ts
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const factory = ClockWorker as any;
-            this.worker = factory();
-            if (this.worker) {
-                this.worker.onmessage = (ev: MessageEvent) => {
-                    const payload = ev.data as { now?: number };
-                    if (payload && typeof payload.now === 'number' && this.timeEl) {
-                        this.timeEl.textContent = formatTime(new Date(payload.now));
-                    }
-                };
-                this.worker.postMessage('start');
-            }
-        } catch (e) {
-            logger.error('Count Novels: Failed to create inline worker, falling back', e);
-            // Fallback: create a simple interval on main thread
+        // If no external scheduler is used, create a fallback timer/worker
+        if (this.useWorkerFallback) {
+            // Fallback using setInterval on main thread; keep it simple
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const id: any = window.setInterval(() => {
                 if (this.timeEl) this.timeEl.textContent = formatTime(new Date());
@@ -59,24 +41,22 @@ export class ClockComponent {
         }
     }
 
+    // Called by external scheduler (main thread) when a tick occurs
+    public handleTick(now?: number): void {
+        if (!this.timeEl) return;
+        const date = typeof now === 'number' ? new Date(now) : new Date();
+        this.timeEl.textContent = formatTime(date);
+    }
 
     public destroy(): void {
         if (this.worker) {
-            try {
-                this.worker.postMessage('stop');
-            } catch (_e) {
-                // ignore
-                logger.error("Failed to stop worker:", _e);
-            }
-            try {
-                this.worker.terminate();
-            } catch (_e) {
-                // ignore
-                logger.error("Failed to terminate worker:", _e);
-            }
+            try { this.worker.terminate(); } catch (_e) { /* ignore */ }
             this.worker = undefined;
         }
-        
+        if (this.intervalId != null) {
+            try { window.clearInterval(this.intervalId); } catch (_e) { /* ignore */ }
+            this.intervalId = undefined;
+        }
         if (this.timeEl && this.timeEl.parentElement) {
             this.timeEl.remove();
             this.timeEl = undefined;

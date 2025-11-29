@@ -14,6 +14,8 @@ self.onmessage = function (e) {
         if (self._collectTimer) { clearInterval(self._collectTimer); self._collectTimer = undefined; }
         // @ts-expect-error
         if (self._statusTimer) { clearInterval(self._statusTimer); self._statusTimer = undefined; }
+        // @ts-expect-error
+        if (self._tickTimer) { clearInterval(self._tickTimer); self._tickTimer = undefined; }
 
         if (typeof data.collectInterval === 'number') {
             // @ts-expect-error
@@ -23,6 +25,10 @@ self.onmessage = function (e) {
             // @ts-expect-error
             self._statusTimer = setInterval(function () { self.postMessage({ type: 'status' }); }, data.statusInterval);
         }
+        if (typeof data.tickInterval === 'number') {
+            // @ts-expect-error
+            self._tickTimer = setInterval(function () { self.postMessage({ type: 'tick', now: Date.now() }); }, data.tickInterval);
+        }
         return;
     }
 
@@ -31,6 +37,8 @@ self.onmessage = function (e) {
         if (self._collectTimer) { clearInterval(self._collectTimer); self._collectTimer = undefined; }
         // @ts-expect-error
         if (self._statusTimer) { clearInterval(self._statusTimer); self._statusTimer = undefined; }
+        // @ts-expect-error
+        if (self._tickTimer) { clearInterval(self._tickTimer); self._tickTimer = undefined; }
         return;
     }
 
@@ -41,6 +49,8 @@ self.onmessage = function (e) {
         if (self._collectTimer) { clearInterval(self._collectTimer); self._collectTimer = undefined; }
         // @ts-expect-error
         if (self._statusTimer) { clearInterval(self._statusTimer); self._statusTimer = undefined; }
+        // @ts-expect-error
+        if (self._tickTimer) { clearInterval(self._tickTimer); self._tickTimer = undefined; }
         if (typeof data.collectInterval === 'number') {
             // @ts-expect-error
             self._collectTimer = setInterval(function () { self.postMessage({ type: 'collect' }); }, data.collectInterval);
@@ -48,6 +58,10 @@ self.onmessage = function (e) {
         if (typeof data.statusInterval === 'number') {
             // @ts-expect-error
             self._statusTimer = setInterval(function () { self.postMessage({ type: 'status' }); }, data.statusInterval);
+        }
+        if (typeof data.tickInterval === 'number') {
+            // @ts-expect-error
+            self._tickTimer = setInterval(function () { self.postMessage({ type: 'tick', now: Date.now() }); }, data.tickInterval);
         }
         return;
     }
