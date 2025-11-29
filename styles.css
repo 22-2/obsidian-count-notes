@@ -129,7 +129,7 @@
    (like the clock visibility) are based on the entire view size rather than
    only the chart box. The view element created by the plugin sets
    data-type="count-novels-home". */
-[data-type="count-novels-home"] {
+.workspace-leaf-content[data-type="count-novels-home"] {
 	container-type: size;
 	height: 100%;
 }
