@@ -1,0 +1,56 @@
+// Scheduler worker: runs timers inside worker and posts messages to main thread
+// Messages accepted:
+// { cmd: 'start', collectInterval: number, statusInterval: number }
+// { cmd: 'stop' }
+// { cmd: 'update', collectInterval?: number, statusInterval?: number }
+
+self.onmessage = function (e) {
+    const data = e.data;
+    if (!data || !data.cmd) return;
+
+    if (data.cmd === 'start') {
+        // clear existing
+        // @ts-expect-error
+        if (self._collectTimer) { clearInterval(self._collectTimer); self._collectTimer = undefined; }
+        // @ts-expect-error
+        if (self._statusTimer) { clearInterval(self._statusTimer); self._statusTimer = undefined; }
+
+        if (typeof data.collectInterval === 'number') {
+            // @ts-expect-error
+            self._collectTimer = setInterval(function () { self.postMessage({ type: 'collect' }); }, data.collectInterval);
+        }
+        if (typeof data.statusInterval === 'number') {
+            // @ts-expect-error
+            self._statusTimer = setInterval(function () { self.postMessage({ type: 'status' }); }, data.statusInterval);
+        }
+        return;
+    }
+
+    if (data.cmd === 'stop') {
+        // @ts-expect-error
+        if (self._collectTimer) { clearInterval(self._collectTimer); self._collectTimer = undefined; }
+        // @ts-expect-error
+        if (self._statusTimer) { clearInterval(self._statusTimer); self._statusTimer = undefined; }
+        return;
+    }
+
+    if (data.cmd === 'update') {
+        // update timers
+        // just restart with new values if provided
+        // @ts-expect-error
+        if (self._collectTimer) { clearInterval(self._collectTimer); self._collectTimer = undefined; }
+        // @ts-expect-error
+        if (self._statusTimer) { clearInterval(self._statusTimer); self._statusTimer = undefined; }
+        if (typeof data.collectInterval === 'number') {
+            // @ts-expect-error
+            self._collectTimer = setInterval(function () { self.postMessage({ type: 'collect' }); }, data.collectInterval);
+        }
+        if (typeof data.statusInterval === 'number') {
+            // @ts-expect-error
+            self._statusTimer = setInterval(function () { self.postMessage({ type: 'status' }); }, data.statusInterval);
+        }
+        return;
+    }
+};
+
+export {};

@@ -4,6 +4,8 @@ import type CountNovelsPlugin from "../main";
 import { VIEW_TYPE_COUNT_NOVEL } from "../utils/constants";
 import type { StatsStorage } from "./statsStorage";
 import log from "loglevel";
+// @ts-ignore - inline worker plugin provides factory for .worker.ts
+import CountWorker from "../workers/count.worker.ts";
 import { isPathInExcludedFolders } from "src/utils/excludedFolders";
 
 const logger = log.getLogger("DataCollectionService");
@@ -13,10 +15,54 @@ const logger = log.getLogger("DataCollectionService");
  * ファイルスキャンと文字数集計機能を提供
  */
 export class DataCollectionService {
+	private countWorker?: Worker;
+	private pendingResponses: Map<string, (n: number) => void> = new Map();
+	private idCounter = 0;
+
 	constructor(
 		private readonly plugin: CountNovelsPlugin,
 		private readonly statsStorage: StatsStorage
-	) {}
+	) {
+		this.setupWorker();
+	}
+
+	private setupWorker(): void {
+		try {
+			// factory returns a Worker instance
+			const factory = CountWorker;
+			const workerInstance = factory();
+			this.countWorker = workerInstance;
+			if (this.countWorker) {
+				this.countWorker.onmessage = (ev: MessageEvent) => {
+				const data = ev.data;
+				if (!data) return;
+
+				if (data.results && Array.isArray(data.results)) {
+					for (const r of data.results) {
+						const resolver = this.pendingResponses.get(r.id);
+						if (resolver) {
+							resolver(r.count);
+							this.pendingResponses.delete(r.id);
+						}
+					}
+					return;
+				}
+
+				if (data.id && typeof data.count === "number") {
+					const resolver = this.pendingResponses.get(data.id);
+					if (resolver) {
+						resolver(data.count);
+						this.pendingResponses.delete(data.id);
+					}
+				}
+				};
+			}
+		} catch (e) {
+			// Worker creation failed; will fallback to main-thread counting
+			logger.warn("Count Novels: count worker creation failed, falling back to main-thread counts", e);
+			this.countWorker = undefined;
+		}
+	}
 
 	/**
 	 * 指定タグを持つファイルを検索する機能
@@ -130,8 +176,23 @@ export class DataCollectionService {
 		try {
 			const content = await this.plugin.app.vault.cachedRead(file);
 			const { content: markdownContent } = splitMd(content);
-			// Remove ASCII whitespace (spaces, tabs, newlines) and full-width spaces (U+3000)
-			// so that only visible/non-whitespace characters are counted.
+
+			if (this.countWorker) {
+				const id = `c_${++this.idCounter}_${Date.now()}`;
+				return new Promise<number>((resolve) => {
+					this.pendingResponses.set(id, resolve);
+					try {
+						this.countWorker!.postMessage({ id, content: markdownContent });
+					} catch (e) {
+						// postMessage failed; fallback to main-thread count
+						this.pendingResponses.delete(id);
+						const cleaned = markdownContent.replace(/[\s\u3000]+/g, "");
+						resolve(cleaned.length);
+					}
+				});
+			}
+
+			// Fallback: main-thread count
 			const cleaned = markdownContent.replace(/[\s\u3000]+/g, "");
 			return cleaned.length;
 		} catch (error) {
@@ -151,11 +212,16 @@ export class DataCollectionService {
 		try {
 			const taggedFiles = await this.findFilesWithTag(tag);
 
-			const counts = await Promise.all(
-				taggedFiles.map((file) => this.countCharactersInFile(file))
-			);
-
-			const totalCount = counts.reduce((sum, count) => sum + count, 0);
+			// Process files in chunks to avoid flooding the event loop
+			const concurrency = 6;
+			let totalCount = 0;
+			for (let i = 0; i < taggedFiles.length; i += concurrency) {
+				const chunk = taggedFiles.slice(i, i + concurrency);
+				const counts = await Promise.all(chunk.map((file) => this.countCharactersInFile(file)));
+				totalCount += counts.reduce((s, c) => s + c, 0);
+				// allow event loop to process UI tasks
+				await new Promise((r) => setTimeout(r, 0));
+			}
 
 			logger.log(
 				`Count Novels: Total character count for tag "${tag}": ${totalCount}`
