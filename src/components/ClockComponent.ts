@@ -1,8 +1,9 @@
 import log from "loglevel";
+// @ts-ignore: inline-worker plugin provides a default factory for .worker.ts imports
+import ClockWorker from "../workers/clock.worker.ts";
 
 const logger = log.getLogger("ClockComponent");
 
-// ユーティリティ関数群
 function formatTime(date: Date): string {
     const hh = String(date.getHours()).padStart(2, '0');
     const mm = String(date.getMinutes()).padStart(2, '0');
@@ -10,28 +11,11 @@ function formatTime(date: Date): string {
     return `${hh}:${mm}:${ss}`;
 }
 
-function createWorkerBlob(): Blob {
-    const workerCode = `
-        self.onmessage = function(e) {
-            if (e && e.data === 'start') {
-                self._timer = setInterval(function() {
-                    self.postMessage({ now: Date.now() });
-                }, 1000);
-            } else if (e && e.data === 'stop') {
-                if (self._timer) {
-                    clearInterval(self._timer);
-                    self._timer = undefined;
-                }
-            }
-        };
-    `;
-    return new Blob([workerCode], { type: 'application/javascript' });
-}
-
 export class ClockComponent {
     private container: HTMLElement;
     private timeEl?: HTMLElement;
     private worker?: Worker;
+    private intervalId?: number;
 
     constructor(container: HTMLElement) {
         this.container = container;
@@ -49,20 +33,29 @@ export class ClockComponent {
     }
 
     private setupWorker(): void {
-        const blob = createWorkerBlob();
-        const url = URL.createObjectURL(blob);
-        
         try {
-            this.worker = new Worker(url);
-            this.worker.onmessage = (ev: MessageEvent) => {
-                const payload = ev.data as { now?: number };
-                if (payload && typeof payload.now === 'number' && this.timeEl) {
-                    this.timeEl.textContent = formatTime(new Date(payload.now));
-                }
-            };
-            this.worker.postMessage('start');
-        } finally {
-            URL.revokeObjectURL(url);
+            // The inline-worker plugin exposes a factory that returns a Worker instance
+            // TypeScript declaration for '*.worker.ts' is provided in src/types/worker.d.ts
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const factory = ClockWorker as any;
+            this.worker = factory();
+            if (this.worker) {
+                this.worker.onmessage = (ev: MessageEvent) => {
+                    const payload = ev.data as { now?: number };
+                    if (payload && typeof payload.now === 'number' && this.timeEl) {
+                        this.timeEl.textContent = formatTime(new Date(payload.now));
+                    }
+                };
+                this.worker.postMessage('start');
+            }
+        } catch (e) {
+            logger.error('Count Novels: Failed to create inline worker, falling back', e);
+            // Fallback: create a simple interval on main thread
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const id: any = window.setInterval(() => {
+                if (this.timeEl) this.timeEl.textContent = formatTime(new Date());
+            }, 1000);
+            this.intervalId = typeof id === 'number' ? id : (id as unknown as number);
         }
     }
 
