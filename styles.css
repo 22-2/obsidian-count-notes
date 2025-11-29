@@ -8,10 +8,12 @@
 .count-novels-main {
 	padding: var(--size-4-2);
 	width: 100%;
-	/* height: 100%; */
+	height: 100%;
 	box-sizing: border-box;
 	overflow-y: auto;
 	overflow-x: hidden;
+	display: flex;
+    flex-direction: column;
 }
 
 /* メインコンテナの直下要素を中央揃えにする */
@@ -129,11 +131,14 @@
    data-type="count-novels-home". */
 [data-type="count-novels-home"] {
 	container-type: size;
+	height: 100%;
 }
 
 /* Clock shown under chart/view */
 /* 時計全体のラッパー */
 .count-novels-clock-wrapper {
+	margin-top: auto;
+	margin-bottom: auto;
 	font-family: 'Montserrat', 'Hiragino Sans', 'Yu Gothic UI', sans-serif;
 	color: #c8c3bc; /* 画像のようなベージュ/グレー */
 	text-align: center;
@@ -165,8 +170,6 @@
 @container (min-height: 500px) {
 	.count-novels-clock-wrapper {
 		display: flex;
-		margin-top: 1rem;
-		margin-bottom: 1rem;
 	}
 
 	/* 高さがある程度ある場合のフォントサイズ設定 */
