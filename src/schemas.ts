@@ -124,11 +124,11 @@ export const PERIOD_CONFIGS: Record<PeriodType, PeriodConfig> = {
 		label: "24時間",
 		shortLabel: "24",
 	},
-	// day: {
-	// 	type: "day",
-	// 	label: "日別",
-	// 	shortLabel: "日",
-	// },
+	day: {
+		type: "day",
+		label: "日別",
+		shortLabel: "日",
+	},
 	week: {
 		type: "week",
 		label: "週別",

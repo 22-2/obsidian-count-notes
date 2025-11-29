@@ -18,7 +18,7 @@ export class ClockComponent {
 
         // 秒刻みの更新を開始
         this.updateText();
-        this.intervalId = window.setInterval(() => this.updateText(), 1000) as unknown as number;
+        this.intervalId = window.setInterval(() => this.updateText(), 500) as unknown as number;
     }
 
     private updateText(): void {

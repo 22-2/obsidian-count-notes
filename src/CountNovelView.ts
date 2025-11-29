@@ -104,6 +104,15 @@ export class CountNovelView extends ItemView {
 			return;
 		}
 
+		// If a clock is mounted, destroy it before we clear the container.
+		// renderView() empties DOM and recreates components; leaving the
+		// old ClockComponent around would remove its element from the DOM
+		// but keep its interval running, causing the clock to disappear.
+		if (this.clockComponent) {
+			this.clockComponent.destroy();
+			this.clockComponent = undefined;
+		}
+
 		this.containerEl.empty();
 		const mainContainer = this.containerEl.createDiv("count-novels-main");
 
@@ -176,7 +185,7 @@ export class CountNovelView extends ItemView {
 			});
 	}
 
-	private async renderMainInterface(container: HTMLElement): Promise<void> {
+private async renderMainInterface(container: HTMLElement): Promise<void> {
 		try {
 			const tabSection = container.createDiv("count-novels-tabs-section");
 			this.createTabComponent(tabSection);
@@ -190,11 +199,23 @@ export class CountNovelView extends ItemView {
 			);
 			this.createChartComponent(chartContent);
 
-			// 時計コンポーネントを mainContainer の直下にマウント（チャートではなくビュー全体の下に表示）
-			if (!this.clockComponent) {
-				this.clockComponent = new ClockComponent(container, 220, false);
-				this.clockComponent.mount();
+			// --- 修正箇所ここから ---
+			// 修正前:
+			// if (!this.clockComponent) {
+			//     this.clockComponent = new ClockComponent(container);
+			//     this.clockComponent.mount();
+			// }
+
+			// 修正後:
+			// 競合状態で古いClockが残っている可能性があるため、存在すれば確実に破棄する
+			if (this.clockComponent) {
+				this.clockComponent.destroy();
 			}
+			
+			// 条件分岐(if)を外し、常に新しいコンテナ(container)に対して時計を作成する
+			this.clockComponent = new ClockComponent(container);
+			this.clockComponent.mount();
+			// --- 修正箇所ここまで ---
 
 			await this.updateContent();
 		} catch (error) {
