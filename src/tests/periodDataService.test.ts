@@ -82,6 +82,8 @@ describe("PeriodDataService", () => {
 			expect(stats.total).toBe(1000);
 			expect(stats.average).toBe(250);
 			expect(stats.periodLabel).toBe("24時間");
+			// 10時のデータは400
+			expect(stats.last1Hour).toBe(400);
 		});
 
 		test("should return correct stats for day", async () => {

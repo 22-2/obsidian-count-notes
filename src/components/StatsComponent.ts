@@ -18,7 +18,7 @@ export class StatsComponent {
 		if (periodType === "day") {
 			this.createSummaryItem(
 				summaryContent,
-				"今日の執筆",
+				"今日の合計",
 				stats.total.toLocaleString(),
 				"文字"
 			);
@@ -100,11 +100,18 @@ export class StatsComponent {
 		if (periodType === "24hours") {
 			this.createSummaryItem(
 				summaryContent,
-				"直近24時間の合計",
+				"今日の合計",
 				stats.total.toLocaleString(),
 				"文字"
 			);
-			if (stats.average !== 0) {
+			if (stats.last1Hour !== undefined) {
+				this.createSummaryItem(
+					summaryContent,
+					"直近1時間",
+					stats.last1Hour.toLocaleString(),
+					"文字"
+				);
+			} else if (stats.average !== 0) {
 				this.createSummaryItem(
 					summaryContent,
 					"1時間の平均",
@@ -112,12 +119,12 @@ export class StatsComponent {
 					"文字"
 				);
 			}
-			this.createSummaryItem(
-				summaryContent,
-				"継続日数",
-				stats.streak.toString(),
-				"日"
-			);
+			// this.createSummaryItem(
+			// 	summaryContent,
+			// 	"継続日数",
+			// 	stats.streak.toString(),
+			// 	"日"
+			// );
 		}
 	}
 

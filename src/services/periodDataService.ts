@@ -544,11 +544,16 @@ export class PeriodDataService {
 		const average = activeHours > 0 ? Math.round(total / activeHours) : 0;
 		const streak = this.calculateStreak(dailyStats);
 
+		// 直近1時間（現在の時間帯）の集計
+		const currentHourKey = `${todayString}-${this.formatHour(today.getHours())}`;
+		const last1Hour = hourlyStats[currentHourKey] || 0;
+
 		return {
 			total,
 			average,
 			streak,
 			periodLabel: "24時間",
+			last1Hour,
 		};
 	}
 

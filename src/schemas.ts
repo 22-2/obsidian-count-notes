@@ -22,6 +22,7 @@ export const PeriodStatsSchema = v.object({
 	average: v.number(),
 	streak: v.number(),
 	periodLabel: v.string(),
+	last1Hour: v.optional(v.number()),
 });
 
 /**
