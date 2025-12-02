@@ -104,6 +104,10 @@ export class CountNovelView extends ItemView {
 			return;
 		}
 
+		// データを先に取得してから DOM を操作する
+		// これにより、非同期待機中に古い状態が見える問題を防ぐ
+		const hasData = await this.hasValidData();
+
 		// If a clock is mounted, destroy it before we clear the container.
 		// renderView() empties DOM and recreates components; leaving the
 		// old ClockComponent around would remove its element from the DOM
@@ -115,8 +119,6 @@ export class CountNovelView extends ItemView {
 
 		this.containerEl.empty();
 		const mainContainer = this.containerEl.createDiv("count-novels-main");
-
-		const hasData = await this.hasValidData();
 		
 		// Always render tag selector if multiple tags exist, even if no data yet
 		this.renderTagSelector(mainContainer);

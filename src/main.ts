@@ -273,12 +273,17 @@ async function openCountNovelsView(plugin: CountNovelsPlugin): Promise<void> {
 	}
 }
 
-function refreshViews(plugin: CountNovelsPlugin): void {
+async function refreshViews(plugin: CountNovelsPlugin): Promise<void> {
+	const views: CountNovelView[] = [];
 	plugin.app.workspace.iterateAllLeaves((leaf) => {
 		if (leaf.view.getViewType() === VIEW_TYPE_COUNT_NOVEL) {
-			(leaf.view as CountNovelView).renderView();
+			views.push(leaf.view as CountNovelView);
 		}
 	});
+	// 各ビューを順次更新して競合を防ぐ
+	for (const view of views) {
+		await view.renderView();
+	}
 }
 
 function formatStatusBarText(lastCollectedAt: string | undefined): string {
