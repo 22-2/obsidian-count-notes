@@ -274,15 +274,12 @@ async function openCountNovelsView(plugin: CountNovelsPlugin): Promise<void> {
 }
 
 async function refreshViews(plugin: CountNovelsPlugin): Promise<void> {
-	const views: CountNovelView[] = [];
-	plugin.app.workspace.iterateAllLeaves((leaf) => {
-		if (leaf.view.getViewType() === VIEW_TYPE_COUNT_NOVEL) {
-			views.push(leaf.view as CountNovelView);
-		}
-	});
+	const leaves = plugin.app.workspace.getLeavesOfType(VIEW_TYPE_COUNT_NOVEL);
 	// 各ビューを順次更新して競合を防ぐ
-	for (const view of views) {
-		await view.renderView();
+	for (const leaf of leaves) {
+		const view = leaf.view as CountNovelView;
+		// ビューが完全に初期化されている場合のみ更新
+		await view.renderView?.();
 	}
 }
 
