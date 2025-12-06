@@ -86,7 +86,20 @@ export class DataStorage {
 		}
 
 		try {
-			await this.plugin.saveData(this.data);
+			// Atomic-ish write: write to temp file then rename to avoid truncated JSON
+			const adapter = this.plugin.app.vault.adapter as any;
+			const pluginDir = `${this.plugin.app.vault.configDir}/plugins/${this.plugin.manifest.id}`;
+			const dataPath = `${pluginDir}/data.json`;
+			const tmpPath = `${pluginDir}/data.tmp.json`;
+
+			if (adapter?.write && adapter?.rename) {
+				const json = JSON.stringify(this.data);
+				await adapter.write(tmpPath, json);
+				await adapter.rename(tmpPath, dataPath);
+			} else {
+				// Fallback to Obsidian API when adapter is not writable/renameable
+				await this.plugin.saveData(this.data);
+			}
 		} catch (error) {
 			console.error("Count Novels: Failed to save data:", error);
 			throw error;
