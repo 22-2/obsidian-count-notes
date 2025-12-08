@@ -1,6 +1,11 @@
 import * as v from "valibot";
 import type CountNovelsPlugin from "./main";
-import { PluginDataSchema, type PeriodType, type PluginData } from "./schemas";
+import {
+	PeriodTypeSchema,
+	PluginDataSchema,
+	type PeriodType,
+	type PluginData,
+} from "./schemas";
 
 /**
  * データストレージクラス
@@ -86,23 +91,70 @@ export class DataStorage {
 		}
 
 		try {
-			// Atomic-ish write: write to temp file then rename to avoid truncated JSON
-			const adapter = this.plugin.app.vault.adapter as any;
-			const pluginDir = `${this.plugin.app.vault.configDir}/plugins/${this.plugin.manifest.id}`;
-			const dataPath = `${pluginDir}/data.json`;
-			const tmpPath = `${pluginDir}/data.tmp.json`;
-
-			if (adapter?.write && adapter?.rename) {
-				const json = JSON.stringify(this.data);
-				await adapter.write(tmpPath, json);
-				await adapter.rename(tmpPath, dataPath);
+			if (this.canUseAtomicSave()) {
+				await this.saveDataAtomically(this.data);
 			} else {
-				// Fallback to Obsidian API when adapter is not writable/renameable
 				await this.plugin.saveData(this.data);
 			}
 		} catch (error) {
 			console.error("Count Novels: Failed to save data:", error);
 			throw error;
+		}
+	}
+
+	/**
+	 * アトミック保存が可能かどうかを判定する
+	 */
+	private canUseAtomicSave(): boolean {
+		const adapter = this.plugin.app?.vault?.adapter as any;
+		return (
+			adapter &&
+			typeof adapter.write === "function" &&
+			typeof adapter.rename === "function" &&
+			typeof adapter.remove === "function" &&
+			typeof adapter.exists === "function" &&
+			this.plugin.app?.vault?.configDir &&
+			this.plugin.manifest?.id
+		);
+	}
+
+	/**
+	 * アトミックにデータを保存する
+	 */
+	private async saveDataAtomically(data: PluginData): Promise<void> {
+		const adapter = this.plugin.app.vault.adapter as any;
+		const pluginDir = `${this.plugin.app.vault.configDir}/plugins/${this.plugin.manifest.id}`;
+		const dataPath = `${pluginDir}/data.json`;
+		const tmpPath = `${pluginDir}/data.tmp.json`;
+
+		try {
+			// Ensure plugin directory exists
+			const ensureDirExists = adapter.mkdir
+				? adapter.mkdir.bind(adapter)
+				: null;
+			const dirExists = await adapter.exists(pluginDir);
+			if (!dirExists && ensureDirExists) {
+				await ensureDirExists(pluginDir);
+			}
+
+			if (!(await adapter.exists(pluginDir))) {
+				throw new Error("Plugin directory missing");
+			}
+
+			const json = JSON.stringify(data);
+			await adapter.write(tmpPath, json);
+
+			if (await adapter.exists(dataPath)) {
+				await adapter.remove(dataPath);
+			}
+
+			await adapter.rename(tmpPath, dataPath);
+		} catch (e) {
+			console.warn(
+				"Count Novels: Atomic save failed, falling back to standard save:",
+				e
+			);
+			await this.plugin.saveData(data);
 		}
 	}
 
@@ -143,9 +195,8 @@ export class DataStorage {
 	 * 期間タイプをバリデーションする
 	 */
 	private validatePeriod(period: PeriodType): void {
-		// PeriodType に合わせて "24hours" を許可する
-		const validPeriods: PeriodType[] = ["24hours", "day", "week", "month", "year"];
-		if (!validPeriods.includes(period)) {
+		const result = v.safeParse(PeriodTypeSchema, period);
+		if (!result.success) {
 			throw new Error(`Invalid period: ${period}`);
 		}
 	}
