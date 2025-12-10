@@ -1,24 +1,4 @@
-import type { App as ElectronApp } from "electron";
-import type { App, FileManager, TFile } from "obsidian";
-
-export function getFrontmatterAsync(app: ElectronApp, file: TFile): any {
-	return new Promise((resolve) => {
-		return ((app as any).fileManager as FileManager).processFrontMatter(
-			file,
-			(frontmatter) => resolve(frontmatter)
-		);
-	});
-}
-
-export function parseDate(str: string) {
-	// @ts-expect-error
-	const date = moment(str, "YYYY-MM-DD ddd, HH:mm:ss");
-	if (date.isValid()) {
-		return date.toISOString();
-	}
-	// @ts-expect-error
-	return moment(str).toISOString();
-}
+import type { App } from "obsidian";
 
 export function splitMd(markdownText: string): {
 	content: string;
