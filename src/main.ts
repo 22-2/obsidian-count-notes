@@ -12,7 +12,7 @@ import {
 	isPathInExcludedFolders,
 	normalizeExcludedFolders,
 } from "./utils/excludedFolders";
-// @ts-ignore: inline worker import
+// @ts-expect-error: inline worker import
 import SchedulerWorker from "./workers/scheduler.worker.ts";
 
 const COLLECTION_INTERVAL = 10 * 60 * 1000; // 10分間隔

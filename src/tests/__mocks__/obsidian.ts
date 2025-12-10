@@ -61,3 +61,7 @@ export class FileManager {}
 export const normalizePath = (value: string): string => {
 	return value.replace(/\\/g, "/").replace(/\/+/g, "/");
 };
+
+export class Notice {
+	constructor(message: string) {}
+}

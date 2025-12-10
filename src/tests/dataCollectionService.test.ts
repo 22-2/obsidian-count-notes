@@ -8,6 +8,32 @@ import {
 	normalizeExcludedFolders,
 } from "../utils/excludedFolders";
 
+vi.mock("../workers/count.worker.ts", () => {
+	return {
+		default: function () {
+			const worker = {
+				postMessage: vi.fn((data) => {
+					// Simulate worker response
+					if (data.id && data.content) {
+						// Simple count logic for test
+						const count = data.content.length;
+						setTimeout(() => {
+							if (worker.onmessage) {
+								worker.onmessage({
+									data: { id: data.id, count },
+								} as MessageEvent);
+							}
+						}, 0);
+					}
+				}),
+				onmessage: null as ((ev: MessageEvent) => void) | null,
+				terminate: vi.fn(),
+			};
+			return worker;
+		},
+	};
+});
+
 class StatsStorageMock implements Partial<StatsStorage> {
 	getLastTotalCharacterCount = vi.fn().mockResolvedValue(0);
 	saveLastTotalCharacterCount = vi.fn().mockResolvedValue(undefined);
@@ -69,6 +95,12 @@ describe("DataCollectionService.collectData", () => {
 
 	beforeAll(() => {
 		vi.useFakeTimers().setSystemTime(mockDate);
+		global.window = {
+			moment: () => ({
+				format: (fmt: string) => "2025-10-02",
+				hour: () => 12,
+			}),
+		} as any;
 	});
 
 	afterAll(() => {
@@ -90,7 +122,7 @@ describe("DataCollectionService.collectData", () => {
 		expect(calcSpy).toHaveBeenCalledWith("novel");
 		expect(statsStorage.saveLastTotalCharacterCount).toHaveBeenCalledWith(1500, "novel");
 		expect(statsStorage.updateDailyStats).toHaveBeenCalledWith("2025-10-02", 500, "novel");
-		expect(statsStorage.updateHourlyStats).toHaveBeenCalledWith("2025-10-02", 500, "novel");
+		expect(statsStorage.updateHourlyStats).toHaveBeenCalledWith("2025-10-02", 500, "novel", 12);
 		expect(refreshSpy).toHaveBeenCalled();
 	});
 
@@ -106,7 +138,7 @@ describe("DataCollectionService.collectData", () => {
 
 		expect(statsStorage.saveLastTotalCharacterCount).toHaveBeenCalledWith(500, "novel");
 		expect(statsStorage.updateDailyStats).toHaveBeenCalledWith("2025-10-02", -1500, "novel");
-		expect(statsStorage.updateHourlyStats).toHaveBeenCalledWith("2025-10-02", -1500, "novel");
+		expect(statsStorage.updateHourlyStats).toHaveBeenCalledWith("2025-10-02", -1500, "novel", 12);
 		expect(refreshSpy).toHaveBeenCalled();
 	});
 

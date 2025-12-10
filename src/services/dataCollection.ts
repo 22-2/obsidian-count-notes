@@ -4,7 +4,7 @@ import type CountNovelsPlugin from "../main";
 import { VIEW_TYPE_COUNT_NOVEL } from "../utils/constants";
 import type { StatsStorage } from "./statsStorage";
 import log from "loglevel";
-// @ts-ignore
+// @ts-expect-error: inline worker import
 import CountWorker from "../workers/count.worker.ts";
 import { isPathInExcludedFolders } from "src/utils/excludedFolders";
 
@@ -163,10 +163,12 @@ export class DataCollectionService {
 		await this.statsStorage.saveLastTotalCharacterCount(currentTotal, tag);
 
 		if (diff !== 0) {
-			const today = new Date().toISOString().split("T")[0];
+			const now = window.moment();
+			const today = now.format("YYYY-MM-DD");
+			const hour = now.hour();
 			await Promise.all([
 				this.statsStorage.updateDailyStats(today, diff, tag),
-				this.statsStorage.updateHourlyStats(today, diff, tag),
+				this.statsStorage.updateHourlyStats(today, diff, tag, hour),
 			]);
 			logger.log(`Tag "${tag}": Updated stats. Diff: ${diff}`);
 		}
