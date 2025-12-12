@@ -4,19 +4,18 @@ import { CountNovelView } from "./CountNovelView";
 import { DataStorage } from "./data";
 import { DEFAULT_SETTINGS, type CountNovelsSettings } from "./schemas";
 import { DataCollectionService } from "./services/dataCollection";
+import {
+	setupAndStartWorker,
+	terminateWorker,
+} from "./services/schedulerWorkerService";
 import { StatsStorage } from "./services/statsStorage";
 import { CountNovelsSettingTab } from "./settings";
 import { VIEW_TYPE_COUNT_NOVEL } from "./utils/constants";
-import { getAllTags } from "./utils/markdwon";
 import {
 	isPathInExcludedFolders,
 	normalizeExcludedFolders,
 } from "./utils/excludedFolders";
-// @ts-expect-error: inline worker import
-import SchedulerWorker from "./workers/scheduler.worker.ts";
-
-const COLLECTION_INTERVAL = 10 * 60 * 1000; // 10分間隔
-const STATUS_BAR_UPDATE_INTERVAL = 60 * 1000; // 1分間隔
+import { getAllTags } from "./utils/markdwon";
 
 export default class CountNovelsPlugin extends Plugin {
 	settings: CountNovelsSettings = DEFAULT_SETTINGS;
@@ -24,22 +23,12 @@ export default class CountNovelsPlugin extends Plugin {
 	statsStorage!: StatsStorage;
 	dataCollectionService!: DataCollectionService;
 	statusBarItemEl!: HTMLElement;
-
 	schedulerWorker?: Worker;
 
-	async onload() {
+	async onload(): Promise<void> {
 		try {
 			this.app.workspace.onLayoutReady(async () => {
-				await this.initializeServices();
-				await this.setupUI();
-				
-				// データの初期ロードと収集
-				await this.dataStorage.loadData();
-				await this.dataCollectionService.collectData();
-				this.updateStatusBar();
-
-				// Workerのセットアップと開始
-				setupAndStartWorker(this);
+				await this.initializePlugin();
 			});
 		} catch (error) {
 			log.error("Count Novels: Failed to initialize plugin:", error);
@@ -47,28 +36,72 @@ export default class CountNovelsPlugin extends Plugin {
 		}
 	}
 
-	onunload() {
-		this.terminateWorker();
+	onunload(): void {
+		terminateWorker(this);
 	}
 
-	terminateWorker() {
-		if (this.schedulerWorker) {
-			try {
-				this.schedulerWorker.postMessage({ cmd: "stop" });
-				this.schedulerWorker.terminate();
-			} catch (e) {
-				log.error("Count Novels: Failed to terminate worker", e);
-			}
-			this.schedulerWorker = undefined;
+	async collectData(): Promise<void> {
+		try {
+			await this.dataCollectionService.collectData();
+			this.dataStorage.updateLastCollectedAt(new Date().toISOString());
+			await this.dataStorage.saveData();
+			this.updateStatusBar();
+			await this.refreshViews();
+		} catch (error) {
+			log.error("Count Novels: Data collection failed:", error);
+			throw error;
 		}
 	}
 
-	async loadSettings(): Promise<void> {
+	updateStatusBar(): void {
+		const lastCollectedAt = this.dataStorage.getData()?.lastCollectedAt;
+		this.statusBarItemEl.setText(this.formatStatusBarText(lastCollectedAt));
+	}
+
+	// ===== Private Methods =====
+
+	private async initializePlugin(): Promise<void> {
+		await this.initializeServices();
+		this.setupUI();
+		await this.performInitialDataLoad();
+		setupAndStartWorker(this);
+	}
+
+	private async initializeServices(): Promise<void> {
+		this.dataStorage = new DataStorage(this);
+		this.statsStorage = new StatsStorage();
+		this.dataCollectionService = new DataCollectionService(
+			this,
+			this.statsStorage
+		);
+		await this.loadSettings();
+		this.configureLogging();
+		this.registerFileModificationHandler();
+	}
+
+	private setupUI(): void {
+		this.addSettingTab(new CountNovelsSettingTab(this));
+		this.registerView(VIEW_TYPE_COUNT_NOVEL, (leaf) => {
+			const view = new CountNovelView(leaf);
+			view.setPlugin(this);
+			return view;
+		});
+		this.registerCommands();
+		this.statusBarItemEl = this.addStatusBarItem();
+	}
+
+	private async performInitialDataLoad(): Promise<void> {
+		await this.dataStorage.loadData();
+		await this.dataCollectionService.collectData();
+		this.updateStatusBar();
+	}
+
+	private async loadSettings(): Promise<void> {
 		try {
 			const pluginData = await this.dataStorage.loadData();
-			const loadedSettings = migrateSettings(pluginData.settings);
+			const loadedSettings = this.migrateSettings(pluginData.settings);
 
-			this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedSettings);
+			this.settings = { ...DEFAULT_SETTINGS, ...loadedSettings };
 			this.settings.excludedFolders = normalizeExcludedFolders(
 				this.settings.excludedFolders
 			);
@@ -90,25 +123,76 @@ export default class CountNovelsPlugin extends Plugin {
 		}
 	}
 
-	async collectData(): Promise<void> {
-		try {
-			await this.dataCollectionService.collectData();
-			this.dataStorage.updateLastCollectedAt(new Date().toISOString());
-			await this.dataStorage.saveData();
-			this.updateStatusBar();
-			refreshViews(this);
-		} catch (error) {
-			log.error("Count Novels: Data collection failed:", error);
-			throw error;
+	private configureLogging(): void {
+		for (const logger of Object.values(log.getLoggers())) {
+			logger.setLevel(this.settings.logLevel);
 		}
 	}
 
-	updateStatusBar(): void {
-		const lastCollectedAt = this.dataStorage.getData()?.lastCollectedAt;
-		this.statusBarItemEl.setText(formatStatusBarText(lastCollectedAt));
+	private registerFileModificationHandler(): void {
+		this.registerEvent(
+			this.app.vault.on("modify", async (file) => {
+				if (!this.isTrackableFile(file)) return;
+
+				log.debug(`Count Novels: File modified: ${file.path}`);
+				await this.collectData().catch((err) => {
+					log.error("Count Novels: Modification update failed:", err);
+				});
+			})
+		);
 	}
 
-	public async handleManualDataCollection(): Promise<void> {
+	private isTrackableFile(file: unknown): file is TFile {
+		if (!(file instanceof TFile) || file.extension !== "md") {
+			return false;
+		}
+
+		if (isPathInExcludedFolders(file.path, this.settings.excludedFolders)) {
+			return false;
+		}
+
+		const tags = getAllTags(file.path, this.app);
+		return this.settings.trackingTags.some((tag) => tags.includes(tag.tag));
+	}
+
+	private registerCommands(): void {
+		this.addCommand({
+			id: "open-count-novels-home",
+			name: "Open Count Novels Home",
+			callback: () => this.openCountNovelsView(),
+		});
+
+		this.addCommand({
+			id: "collect-data-manually",
+			name: "Collect Data Manually (Debug)",
+			callback: () => this.handleManualDataCollection(),
+		});
+	}
+
+	private async openCountNovelsView(): Promise<void> {
+		try {
+			const existingLeaf = this.app.workspace.getLeavesOfType(
+				VIEW_TYPE_COUNT_NOVEL
+			)[0];
+
+			if (existingLeaf) {
+				this.app.workspace.revealLeaf(existingLeaf);
+			} else {
+				const leaf = this.app.workspace.getRightLeaf(false);
+				if (leaf) {
+					await leaf.setViewState({
+						type: VIEW_TYPE_COUNT_NOVEL,
+						active: true,
+					});
+					this.app.workspace.revealLeaf(leaf);
+				}
+			}
+		} catch (error) {
+			log.error("Count Novels: Failed to open view:", error);
+		}
+	}
+
+	private async handleManualDataCollection(): Promise<void> {
 		log.debug("Count Novels: Manual data collection triggered");
 		try {
 			await this.collectData();
@@ -118,180 +202,44 @@ export default class CountNovelsPlugin extends Plugin {
 		}
 	}
 
-	private async initializeServices(): Promise<void> {
-		this.dataStorage = new DataStorage(this);
-		this.statsStorage = new StatsStorage();
-		this.dataCollectionService = new DataCollectionService(
-			this,
-			this.statsStorage
+	private async refreshViews(): Promise<void> {
+		const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_COUNT_NOVEL);
+		for (const leaf of leaves) {
+			const view = leaf.view as CountNovelView;
+			await view.renderView?.();
+		}
+	}
+
+	private formatStatusBarText(lastCollectedAt: string | undefined): string {
+		if (!lastCollectedAt) return "Count Novels: No data";
+
+		const lastCollectedDate = new Date(lastCollectedAt);
+		const now = new Date();
+		const diffInMinutes = Math.floor(
+			(now.getTime() - lastCollectedDate.getTime()) / (1000 * 60)
 		);
-		await this.loadSettings();
-		configureLogging(this.settings.logLevel);
-		registerFileModificationHandler(this);
+
+		if (diffInMinutes < 1) return "Count Novels: Just now";
+		return `Count Novels: ${diffInMinutes}m ago`;
 	}
 
-	private async setupUI(): Promise<void> {
-		this.addSettingTab(new CountNovelsSettingTab(this));
-		this.registerView(VIEW_TYPE_COUNT_NOVEL, (leaf) => {
-			const view = new CountNovelView(leaf);
-			view.setPlugin(this);
-			return view;
-		});
-		registerCommands(this);
-		this.statusBarItemEl = this.addStatusBarItem();
-	}
-}
+	/** 古い設定形式から新しい形式へ移行 */
+	private migrateSettings(
+		loadedSettings: Record<string, unknown> | undefined
+	): Record<string, unknown> | undefined {
+		if (!loadedSettings) return loadedSettings;
 
-// ===== Helper Functions =====
-
-function setupAndStartWorker(plugin: CountNovelsPlugin): void {
-	try {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const factory = SchedulerWorker as any;
-		plugin.schedulerWorker = factory();
-
-		if (!plugin.schedulerWorker) {
-			throw new Error("Worker factory returned undefined");
+		// trackingTag → trackingTags への移行
+		if (
+			"trackingTag" in loadedSettings &&
+			!("trackingTags" in loadedSettings)
+		) {
+			const settings = { ...loadedSettings };
+			settings.trackingTags = [loadedSettings.trackingTag];
+			delete settings.trackingTag;
+			return settings;
 		}
 
-		// イベントハンドラの登録
-		plugin.schedulerWorker.onmessage = (ev: MessageEvent) => {
-			const data = ev.data as any;
-			if (!data) return;
-
-			if (data.type === "collect") {
-				plugin.collectData().catch((err) => 
-					log.error("Count Novels: Scheduled collection failed", err)
-				);
-			} else if (data.type === "status") {
-				plugin.updateStatusBar();
-			} else if (data.type === "tick") {
-				const now = typeof data.now === 'number' ? data.now : Date.now();
-				// forward tick to all CountNovelView instances
-				plugin.app.workspace.iterateAllLeaves((leaf) => {
-					try {
-						if (leaf.view.getViewType() === VIEW_TYPE_COUNT_NOVEL) {
-							const view = leaf.view as any;
-							if (typeof view.handleTick === 'function') {
-								view.handleTick(now);
-							}
-						}
-					} catch (_e) {
-						// ignore per-leaf errors
-					}
-				});
-			}
-		};
-
-		// 計測開始（tickInterval を追加）
-		plugin.schedulerWorker.postMessage({
-			cmd: "start",
-			collectInterval: COLLECTION_INTERVAL,
-			statusInterval: STATUS_BAR_UPDATE_INTERVAL,
-			tickInterval: 1000,
-		});
-
-		log.log("Count Novels: Scheduler worker started.");
-	} catch (e) {
-		const msg = "Count Novels: Critical Error - Scheduler Worker failed to start.";
-		log.error(msg, e);
-		try { new Notice(msg); } catch (_e) {}
-		plugin.schedulerWorker = undefined;
+		return loadedSettings;
 	}
-}
-function migrateSettings(loadedSettings: any): any {
-	if (!loadedSettings) return loadedSettings;
-	if (loadedSettings.trackingTag && !loadedSettings.trackingTags) {
-		loadedSettings.trackingTags = [loadedSettings.trackingTag];
-		delete loadedSettings.trackingTag;
-	}
-	return loadedSettings;
-}
-
-function configureLogging(level: log.LogLevelDesc): void {
-	Object.values(log.getLoggers()).forEach((logger) => {
-		logger.setLevel(level);
-	});
-}
-
-function registerFileModificationHandler(plugin: CountNovelsPlugin): void {
-	plugin.registerEvent(
-		plugin.app.vault.on("modify", async (file) => {
-			if (!(file instanceof TFile) || file.extension !== "md") return;
-
-			if (isPathInExcludedFolders(file.path, plugin.settings.excludedFolders)) {
-				return;
-			}
-
-			const tags = getAllTags(file.path, plugin.app);
-			const hasTrackingTag = plugin.settings.trackingTags.some((tag) =>
-				tags.includes(tag.tag)
-			);
-
-			if (hasTrackingTag) {
-				log.debug(`Count Novels: File modified: ${file.path}`);
-				await plugin.collectData().catch((err) => {
-					log.error("Count Novels: Modification update failed:", err);
-				});
-			}
-		})
-	);
-}
-
-function registerCommands(plugin: CountNovelsPlugin): void {
-	plugin.addCommand({
-		id: "open-count-novels-home",
-		name: "Open Count Novels Home",
-		callback: () => openCountNovelsView(plugin),
-	});
-
-	plugin.addCommand({
-		id: "collect-data-manually",
-		name: "Collect Data Manually (Debug)",
-		callback: () => plugin.handleManualDataCollection(),
-	});
-}
-
-async function openCountNovelsView(plugin: CountNovelsPlugin): Promise<void> {
-	try {
-		const existingLeaf = plugin.app.workspace.getLeavesOfType(
-			VIEW_TYPE_COUNT_NOVEL
-		)[0];
-
-		if (existingLeaf) {
-			plugin.app.workspace.revealLeaf(existingLeaf);
-		} else {
-			const leaf = plugin.app.workspace.getRightLeaf(false)!;
-			await leaf.setViewState({
-				type: VIEW_TYPE_COUNT_NOVEL,
-				active: true,
-			});
-			plugin.app.workspace.revealLeaf(leaf);
-		}
-	} catch (error) {
-		log.error("Count Novels: Failed to open view:", error);
-	}
-}
-
-async function refreshViews(plugin: CountNovelsPlugin): Promise<void> {
-	const leaves = plugin.app.workspace.getLeavesOfType(VIEW_TYPE_COUNT_NOVEL);
-	// 各ビューを順次更新して競合を防ぐ
-	for (const leaf of leaves) {
-		const view = leaf.view as CountNovelView;
-		// ビューが完全に初期化されている場合のみ更新
-		await view.renderView?.();
-	}
-}
-
-function formatStatusBarText(lastCollectedAt: string | undefined): string {
-	if (!lastCollectedAt) return "Count Novels: No data";
-
-	const lastCollectedDate = new Date(lastCollectedAt);
-	const now = new Date();
-	const diffInMinutes = Math.floor(
-		(now.getTime() - lastCollectedDate.getTime()) / (1000 * 60)
-	);
-
-	if (diffInMinutes < 1) return "Count Novels: Just now";
-	return `Count Novels: ${diffInMinutes}m ago`;
 }
