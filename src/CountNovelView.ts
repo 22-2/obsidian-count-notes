@@ -62,12 +62,18 @@ export class CountNovelView extends ItemView {
 		try {
 			this.loadViewStateFromData();
 			const tags = this.plugin.settings.trackingTags;
-			if (tags.length > 0) {
-				// If currentTag is not in tags, reset to first tag
-				if (!tags.includes(this.currentTag)) {
-					this.currentTag = tags[0];
+			const activeTags = tags.filter((t) => t.isActive).map((t) => t.tag);
+
+			if (activeTags.length > 0) {
+				// If currentTag is not in active tags, reset to first active tag
+				if (!activeTags.includes(this.currentTag)) {
+					this.currentTag = activeTags[0];
 				}
+			} else if (tags.length > 0) {
+				// Fallback if no active tags
+				this.currentTag = tags[0].tag;
 			}
+
 			await this.renderView();
 		} catch (error) {
 			console.error("Count Novels: Failed to open view:", error);
@@ -171,14 +177,16 @@ export class CountNovelView extends ItemView {
 
 	private renderTagSelector(container: HTMLElement): void {
 		const tags = this.plugin.settings.trackingTags;
-		if (tags.length <= 1) return;
+		const activeTags = tags.filter((t) => t.isActive);
+
+		if (activeTags.length <= 1) return;
 
 		const wrapper = container.createDiv("count-novels-tag-selector");
 		// Simple dropdown without label to save space, or with label
 		new Setting(wrapper)
 			.setName("Tag")
 			.addDropdown((dropdown) => {
-				tags.forEach((tag) => dropdown.addOption(tag, tag));
+				activeTags.forEach((t) => dropdown.addOption(t.tag, t.tag));
 				dropdown.setValue(this.currentTag);
 				dropdown.onChange(async (value) => {
 					this.currentTag = value;

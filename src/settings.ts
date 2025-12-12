@@ -1,7 +1,30 @@
-import { PluginSettingTab, Setting } from "obsidian";
+import { PluginSettingTab, Setting, SuggestModal, App } from "obsidian";
 import type CountNovelsPlugin from "./main";
 import { type CountNovelsSettings } from "./schemas";
 import { parseExcludedFoldersInput } from "./utils/excludedFolders";
+import { getAllVaultTags } from "src/utils/tags";
+
+class TagSuggestModal extends SuggestModal<string> {
+	constructor(app: App, private onChoose: (tag: string) => void) {
+		super(app);
+	}
+
+	getSuggestions(query: string): string[] {
+		const tags = getAllVaultTags(this.app);
+		return tags.filter((tag) =>
+			tag.toLowerCase().includes(query.toLowerCase())
+		);
+	}
+
+	renderSuggestion(tag: string, el: HTMLElement) {
+		el.createEl("div", { text: tag });
+	}
+
+	onChooseSuggestion(tag: string, evt: MouseEvent | KeyboardEvent) {
+		this.onChoose(tag);
+	}
+}
+
 export class CountNovelsSettingTab extends PluginSettingTab {
 	constructor(public plugin: CountNovelsPlugin) {
 		super(plugin.app, plugin);
@@ -26,24 +49,47 @@ export class CountNovelsSettingTab extends PluginSettingTab {
 
 		new Setting(this.containerEl)
 			.setName("Tracking Tags")
-			.setDesc(
-				"Tags used to identify files for character counting. Enter one tag per line."
-			)
-			.addTextArea((text) => {
-				text.setPlaceholder("novel\nstory")
-					.setValue(this.plugin.settings.trackingTags.join("\n"))
-					.onChange(async (value) => {
-						this.plugin.settings.trackingTags = value
-							.split("\n")
-							.map((t) => t.trim())
-							.filter((t) => t !== "");
-						if (this.plugin.settings.trackingTags.length === 0) {
-							this.plugin.settings.trackingTags = ["novel"];
+			.setDesc("Tags used to identify files for character counting.")
+			.addButton((button) => {
+				button.setButtonText("Add Tag").onClick(() => {
+					new TagSuggestModal(this.app, async (tag) => {
+						if (
+							!this.plugin.settings.trackingTags.some((t) => t.tag === tag)
+						) {
+							this.plugin.settings.trackingTags.push({
+								tag: tag,
+								isActive: true,
+							});
+							await this.plugin.saveSettings();
+							this.display();
 						}
-						await this.plugin.saveSettings();
-					});
-				text.inputEl.rows = 4;
+					}).open();
+				});
 			});
+
+		this.plugin.settings.trackingTags.forEach((tagConfig, index) => {
+			new Setting(this.containerEl)
+				.setName(tagConfig.tag)
+				.addToggle((toggle) => {
+					toggle
+						.setValue(tagConfig.isActive)
+						.setTooltip("Enable tracking for this tag")
+						.onChange(async (value) => {
+							this.plugin.settings.trackingTags[index].isActive = value;
+							await this.plugin.saveSettings();
+						});
+				})
+				.addButton((button) => {
+					button
+						.setIcon("trash")
+						.setTooltip("Remove this tag")
+						.onClick(async () => {
+							this.plugin.settings.trackingTags.splice(index, 1);
+							await this.plugin.saveSettings();
+							this.display();
+						});
+				});
+		});
 
 		new Setting(this.containerEl)
 			.setName("Excluded Folders")

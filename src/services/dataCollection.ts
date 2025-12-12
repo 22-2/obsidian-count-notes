@@ -139,8 +139,10 @@ export class DataCollectionService {
 		if (!tags?.length) return;
 
 		try {
-			for (const tag of tags) {
-				await this.collectDataForTag(tag);
+			for (const tagConfig of tags) {
+				if (tagConfig.isActive) {
+					await this.collectDataForTag(tagConfig.tag);
+				}
 			}
 			this.refreshViews();
 		} catch (error) {

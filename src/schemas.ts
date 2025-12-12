@@ -39,7 +39,12 @@ export const ChartDataPointSchema = v.object({
  */
 export const CountNovelsSettingsSchema = v.object({
 	logLevel: v.picklist(["debug", "info", "warn", "error", "silent"]),
-	trackingTags: v.array(v.pipe(v.string(), v.minLength(1))),
+	trackingTags: v.array(
+		v.object({
+			tag: v.string(),
+			isActive: v.boolean(),
+		})
+	),
 	excludedFolders: v.optional(
 		v.array(v.pipe(v.string(), v.minLength(1))),
 		[]
@@ -152,7 +157,7 @@ export const PERIOD_CONFIGS: Record<PeriodType, PeriodConfig> = {
  */
 export const DEFAULT_SETTINGS: CountNovelsSettings = {
 	logLevel: "debug",
-	trackingTags: ["novel"],
+	trackingTags: [{ tag: "novel", isActive: true }],
 	excludedFolders: [],
 };
 

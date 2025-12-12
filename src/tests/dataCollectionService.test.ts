@@ -46,7 +46,7 @@ type ServiceOptions = {
 	caches?: Record<string, any>;
 	fileContents?: Record<string, string>;
 	leaves?: Array<{ view: any }>;
-	trackingTags?: string[];
+	trackingTags?: { tag: string; isActive: boolean }[];
 	excludedFolders?: string[];
 };
 
@@ -57,7 +57,9 @@ const createService = (options: ServiceOptions = {}) => {
 	const leaves = options.leaves ?? [];
 	const pluginMock = {
 		settings: {
-			trackingTags: options.trackingTags ?? ["novel"],
+			trackingTags: options.trackingTags ?? [
+				{ tag: "novel", isActive: true },
+			],
 			excludedFolders: options.excludedFolders ?? [],
 		},
 		app: {
