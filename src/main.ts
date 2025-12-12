@@ -225,7 +225,7 @@ function registerFileModificationHandler(plugin: CountNovelsPlugin): void {
 
 			const tags = getAllTags(file.path, plugin.app);
 			const hasTrackingTag = plugin.settings.trackingTags.some((tag) =>
-				tags.includes(tag)
+				tags.includes(tag.tag)
 			);
 
 			if (hasTrackingTag) {

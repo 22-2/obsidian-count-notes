@@ -212,25 +212,15 @@ private async renderMainInterface(container: HTMLElement): Promise<void> {
 			);
 			this.createChartComponent(chartContent);
 
-			// --- 修正箇所ここから ---
-			// 修正前:
-			// if (!this.clockComponent) {
-			//     this.clockComponent = new ClockComponent(container);
-			//     this.clockComponent.mount();
-			// }
-
-			// 修正後:
-			// 競合状態で古いClockが残っている可能性があるため、存在すれば確実に破棄する
+			// Ensure any existing clock is destroyed (though renderView should have handled it)
 			if (this.clockComponent) {
 				this.clockComponent.destroy();
 			}
 			
-			// 条件分岐(if)を外し、常に新しいコンテナ(container)に対して時計を作成する
 			// If a scheduler worker exists, prefer external ticks; otherwise allow worker/interval fallback inside component
 			const useWorkerFallback = !this.plugin.schedulerWorker;
 			this.clockComponent = new ClockComponent(container, useWorkerFallback);
 			this.clockComponent.mount();
-			// --- 修正箇所ここまで ---
 
 			await this.updateContent();
 		} catch (error) {
@@ -309,27 +299,15 @@ private async renderMainInterface(container: HTMLElement): Promise<void> {
 	}
 
 	public async refreshSummary(): Promise<void> {
-		try {
-			await this.updateContent();
-		} catch (error) {
-			console.error("Count Novels: Failed to refresh summary:", error);
-		}
+		await this.updateContent();
 	}
 
 	public async refreshChart(): Promise<void> {
-		try {
-			await this.updateContent();
-		} catch (error) {
-			console.error("Count Novels: Failed to refresh chart:", error);
-		}
+		await this.updateContent();
 	}
 
 	public async refreshStats(): Promise<void> {
-		try {
-			await this.updateContent();
-		} catch (error) {
-			console.error("Count Novels: Failed to refresh stats:", error);
-		}
+		await this.updateContent();
 	}
 
 	public getCurrentPeriod(): PeriodType {
