@@ -5,7 +5,7 @@ import { DataStorage } from "../data";
 class MockPlugin {
 	settings = {
 		logLevel: "debug" as const,
-		trackingTags: ["novel"],
+		trackingTags: [{ tag: "novel", isActive: true }],
 		excludedFolders: [] as string[],
 	};
 
