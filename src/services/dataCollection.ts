@@ -134,6 +134,23 @@ export class DataCollectionService {
 		return total;
 	}
 
+	private async calculateCharacterCountsByFile(tag: string): Promise<Map<string, number>> {
+		const files = await this.findFilesWithTag(tag);
+		const concurrency = 6;
+		const results = new Map<string, number>();
+
+		for (let i = 0; i < files.length; i += concurrency) {
+			const chunk = files.slice(i, i + concurrency);
+			const counts = await Promise.all(chunk.map((f) => this.countCharactersInFile(f)));
+			for (let j = 0; j < chunk.length; j++) {
+				results.set(chunk[j].path, counts[j] ?? 0);
+			}
+			await new Promise((r) => setTimeout(r, 0)); // UIブロック防止
+		}
+
+		return results;
+	}
+
 	async collectData(): Promise<void> {
 		const tags = this.plugin.settings.trackingTags;
 		if (!tags?.length) return;
@@ -151,28 +168,60 @@ export class DataCollectionService {
 	}
 
 	private async collectDataForTag(tag: string): Promise<void> {
-		const currentTotal = await this.calculateTotalCharacterCount(tag);
+		const currentCounts = await this.calculateCharacterCountsByFile(tag);
+		const currentTotal = Array.from(currentCounts.values()).reduce((s, n) => s + n, 0);
+
+		const previousFileCounts = await this.statsStorage.getFileCharacterCounts(tag);
 		const previousTotal = await this.statsStorage.getLastTotalCharacterCount(tag);
 
-		// 初回実行時
-		if (previousTotal === null) {
-			await this.statsStorage.saveLastTotalCharacterCount(currentTotal, tag);
-			logger.log(`Initialized stats for "${tag}" at ${currentTotal}`);
+		// 初回実行、または旧方式(lastTotalのみ)からの移行: まずはベースライン保存してスパイクを防ぐ
+		if (previousTotal === null || previousFileCounts.size === 0) {
+			await Promise.all([
+				...Array.from(currentCounts.entries()).map(([path, count]) =>
+					this.statsStorage.saveFileCharacterCount(tag, path, count)
+				),
+				this.statsStorage.saveLastTotalCharacterCount(currentTotal, tag),
+			]);
+			logger.log(`Initialized file baselines for "${tag}" at ${currentTotal}`);
 			return;
 		}
 
-		const diff = currentTotal - previousTotal;
-		await this.statsStorage.saveLastTotalCharacterCount(currentTotal, tag);
+		let diffSum = 0;
+		const currentPaths = new Set<string>(currentCounts.keys());
+		const writes: Promise<void>[] = [];
 
-		if (diff !== 0) {
+		for (const [path, count] of currentCounts.entries()) {
+			const prev = previousFileCounts.get(path);
+			// 新規捕捉ファイル: 初回は差分0としてベースラインだけ保存
+			if (prev === undefined) {
+				writes.push(this.statsStorage.saveFileCharacterCount(tag, path, count));
+				continue;
+			}
+			if (count !== prev) {
+				diffSum += count - prev;
+				writes.push(this.statsStorage.saveFileCharacterCount(tag, path, count));
+			}
+		}
+
+		// 追跡対象から外れたファイルはベースラインも掃除（削除自体は差分として扱わない）
+		for (const prevPath of previousFileCounts.keys()) {
+			if (!currentPaths.has(prevPath)) {
+				writes.push(this.statsStorage.deleteFileCharacterCount(tag, prevPath));
+			}
+		}
+
+		writes.push(this.statsStorage.saveLastTotalCharacterCount(currentTotal, tag));
+		await Promise.all(writes);
+
+		if (diffSum !== 0) {
 			const now = window.moment();
 			const today = now.format("YYYY-MM-DD");
 			const hour = now.hour();
 			await Promise.all([
-				this.statsStorage.updateDailyStats(today, diff, tag),
-				this.statsStorage.updateHourlyStats(today, diff, tag, hour),
+				this.statsStorage.updateDailyStats(today, diffSum, tag),
+				this.statsStorage.updateHourlyStats(today, diffSum, tag, hour),
 			]);
-			logger.log(`Tag "${tag}": Updated stats. Diff: ${diff}`);
+			logger.log(`Tag "${tag}": Updated stats. Diff: ${diffSum}`);
 		}
 	}
 

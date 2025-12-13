@@ -114,4 +114,25 @@ describe("StatsStorage", () => {
 			expect(count).toBeNull();
 		});
 	});
+
+	describe("File Stats", () => {
+		it("should save and retrieve file character counts for a tag", async () => {
+			await statsStorage.saveFileCharacterCount("novel", "a.md", 10);
+			await statsStorage.saveFileCharacterCount("novel", "b.md", 20);
+
+			const map = await statsStorage.getFileCharacterCounts("novel");
+			expect(Object.fromEntries(map.entries())).toEqual({
+				"a.md": 10,
+				"b.md": 20,
+			});
+		});
+
+		it("should delete file character count", async () => {
+			await statsStorage.saveFileCharacterCount("novel", "a.md", 10);
+			await statsStorage.deleteFileCharacterCount("novel", "a.md");
+
+			const map = await statsStorage.getFileCharacterCounts("novel");
+			expect(Object.fromEntries(map.entries())).toEqual({});
+		});
+	});
 });

@@ -12,6 +12,12 @@ export interface HourlyStat {
 	count: number;
 }
 
+export interface FileStat {
+	path: string;
+	tag: string;
+	count: number;
+}
+
 export interface Misc {
 	key: string;
 	value: any;
@@ -26,6 +32,10 @@ export interface CountNovelsDBSchema extends DBSchema {
 		key: [string, string];
 		value: HourlyStat;
 	};
+	fileStats: {
+		key: [string, string];
+		value: FileStat;
+	};
 	misc: {
 		key: string;
 		value: Misc;
@@ -33,7 +43,7 @@ export interface CountNovelsDBSchema extends DBSchema {
 }
 
 const DB_NAME = "obsidian-count-novels-db";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let dbPromise: Promise<IDBPDatabase<CountNovelsDBSchema>> | null = null;
 
@@ -55,6 +65,11 @@ export function getDB(): Promise<IDBPDatabase<CountNovelsDBSchema>> {
 				} else if (oldVersion < 2) {
 					db.deleteObjectStore("hourlyStats");
 					db.createObjectStore("hourlyStats", { keyPath: ["tag", "datetime"] });
+				}
+
+				// fileStats
+				if (!db.objectStoreNames.contains("fileStats")) {
+					db.createObjectStore("fileStats", { keyPath: ["tag", "path"] });
 				}
 
 				// misc

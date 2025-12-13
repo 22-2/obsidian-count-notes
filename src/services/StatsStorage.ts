@@ -5,6 +5,37 @@ const LAST_TOTAL_CHARACTER_COUNT_KEY_PREFIX = "lastTotalCharacterCount";
 
 export class StatsStorage {
 	/**
+	 * Gets all stored file character counts for a tag.
+	 * @returns A promise that resolves to a map of file path -> last known character count.
+	 */
+	async getFileCharacterCounts(tag: string): Promise<Map<string, number>> {
+		const db = await getDB();
+		const range = IDBKeyRange.bound([tag, ""], [tag, "\uffff"]);
+		const items = await db.getAll("fileStats", range);
+		const map = new Map<string, number>();
+		for (const item of items) {
+			map.set(item.path, item.count);
+		}
+		return map;
+	}
+
+	/**
+	 * Saves last known character count for a file under a tag.
+	 */
+	async saveFileCharacterCount(tag: string, path: string, count: number): Promise<void> {
+		const db = await getDB();
+		await db.put("fileStats", { tag, path, count });
+	}
+
+	/**
+	 * Deletes stored character count for a file under a tag.
+	 */
+	async deleteFileCharacterCount(tag: string, path: string): Promise<void> {
+		const db = await getDB();
+		await db.delete("fileStats", [tag, path]);
+	}
+
+	/**
 	 * Gets all daily stats for a specific tag.
 	 * For performance reasons, prefer `getDailyStatsByDateRange` when possible.
 	 * @returns A promise that resolves to the daily stats.

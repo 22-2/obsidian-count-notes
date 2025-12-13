@@ -36,7 +36,10 @@ vi.mock("../workers/count.worker.ts", () => {
 
 class StatsStorageMock implements Partial<StatsStorage> {
 	getLastTotalCharacterCount = vi.fn().mockResolvedValue(0);
+	getFileCharacterCounts = vi.fn().mockResolvedValue(new Map());
 	saveLastTotalCharacterCount = vi.fn().mockResolvedValue(undefined);
+	saveFileCharacterCount = vi.fn().mockResolvedValue(undefined);
+	deleteFileCharacterCount = vi.fn().mockResolvedValue(undefined);
 	updateDailyStats = vi.fn().mockResolvedValue(undefined);
 	updateHourlyStats = vi.fn().mockResolvedValue(undefined);
 }
@@ -95,6 +98,12 @@ afterEach(() => {
 describe("DataCollectionService.collectData", () => {
 	const mockDate = new Date("2025-10-02T12:00:00Z");
 
+	const collectWithTimers = async (service: DataCollectionService) => {
+		const p = service.collectData();
+		await vi.runAllTimersAsync();
+		await p;
+	};
+
 	beforeAll(() => {
 		vi.useFakeTimers().setSystemTime(mockDate);
 		global.window = {
@@ -110,73 +119,139 @@ describe("DataCollectionService.collectData", () => {
 	});
 
 	test("records positive differences", async () => {
-		const { service, statsStorage } = createService();
-		statsStorage.getLastTotalCharacterCount.mockResolvedValueOnce(1000);
-		const calcSpy = vi
-			.spyOn(service as any, "calculateTotalCharacterCount")
-			.mockResolvedValueOnce(1500);
+		const file = createTFile("a.md");
+		const { service, statsStorage } = createService({
+			files: [file],
+			caches: { [file.path]: { tags: [{ tag: "#novel" }] } },
+			fileContents: { [file.path]: "abcdefgh" },
+		});
+		statsStorage.getLastTotalCharacterCount.mockResolvedValueOnce(5);
+		statsStorage.getFileCharacterCounts.mockResolvedValueOnce(
+			new Map([[file.path, 5]])
+		);
 		const refreshSpy = vi
 			.spyOn(service as any, "refreshViews")
 			.mockImplementation(() => undefined);
 
-		await service.collectData();
+		await collectWithTimers(service);
 
-		expect(calcSpy).toHaveBeenCalledWith("novel");
-		expect(statsStorage.saveLastTotalCharacterCount).toHaveBeenCalledWith(1500, "novel");
-		expect(statsStorage.updateDailyStats).toHaveBeenCalledWith("2025-10-02", 500, "novel");
-		expect(statsStorage.updateHourlyStats).toHaveBeenCalledWith("2025-10-02", 500, "novel", 12);
+		expect(statsStorage.saveLastTotalCharacterCount).toHaveBeenCalledWith(8, "novel");
+		expect(statsStorage.updateDailyStats).toHaveBeenCalledWith("2025-10-02", 3, "novel");
+		expect(statsStorage.updateHourlyStats).toHaveBeenCalledWith("2025-10-02", 3, "novel", 12);
 		expect(refreshSpy).toHaveBeenCalled();
 	});
 
 	test("records negative differences to roll back counts", async () => {
-		const { service, statsStorage } = createService();
-		statsStorage.getLastTotalCharacterCount.mockResolvedValueOnce(2000);
-		vi.spyOn(service as any, "calculateTotalCharacterCount").mockResolvedValueOnce(500);
+		const file = createTFile("a.md");
+		const { service, statsStorage } = createService({
+			files: [file],
+			caches: { [file.path]: { tags: [{ tag: "#novel" }] } },
+			fileContents: { [file.path]: "abcd" },
+		});
+		statsStorage.getLastTotalCharacterCount.mockResolvedValueOnce(10);
+		statsStorage.getFileCharacterCounts.mockResolvedValueOnce(
+			new Map([[file.path, 10]])
+		);
 		const refreshSpy = vi
 			.spyOn(service as any, "refreshViews")
 			.mockImplementation(() => undefined);
 
-		await service.collectData();
+		await collectWithTimers(service);
 
-		expect(statsStorage.saveLastTotalCharacterCount).toHaveBeenCalledWith(500, "novel");
-		expect(statsStorage.updateDailyStats).toHaveBeenCalledWith("2025-10-02", -1500, "novel");
-		expect(statsStorage.updateHourlyStats).toHaveBeenCalledWith("2025-10-02", -1500, "novel", 12);
+		expect(statsStorage.saveLastTotalCharacterCount).toHaveBeenCalledWith(4, "novel");
+		expect(statsStorage.updateDailyStats).toHaveBeenCalledWith("2025-10-02", -6, "novel");
+		expect(statsStorage.updateHourlyStats).toHaveBeenCalledWith("2025-10-02", -6, "novel", 12);
 		expect(refreshSpy).toHaveBeenCalled();
 	});
 
 	test("skips updates when there is no difference", async () => {
-		const { service, statsStorage } = createService();
-		statsStorage.getLastTotalCharacterCount.mockResolvedValueOnce(800);
-		vi.spyOn(service as any, "calculateTotalCharacterCount").mockResolvedValueOnce(800);
+		const file = createTFile("a.md");
+		const { service, statsStorage } = createService({
+			files: [file],
+			caches: { [file.path]: { tags: [{ tag: "#novel" }] } },
+			fileContents: { [file.path]: "hello" },
+		});
+		statsStorage.getLastTotalCharacterCount.mockResolvedValueOnce(5);
+		statsStorage.getFileCharacterCounts.mockResolvedValueOnce(
+			new Map([[file.path, 5]])
+		);
 		const refreshSpy = vi
 			.spyOn(service as any, "refreshViews")
 			.mockImplementation(() => undefined);
 
-		await service.collectData();
+		await collectWithTimers(service);
 
-		expect(statsStorage.saveLastTotalCharacterCount).toHaveBeenCalledWith(800, "novel");
+		expect(statsStorage.saveLastTotalCharacterCount).toHaveBeenCalledWith(5, "novel");
 		expect(statsStorage.updateDailyStats).not.toHaveBeenCalled();
 		expect(statsStorage.updateHourlyStats).not.toHaveBeenCalled();
 		expect(refreshSpy).toHaveBeenCalled();
 	});
 
 	test("handles first run (no previous stats)", async () => {
-		const { service, statsStorage } = createService();
+		const file = createTFile("a.md");
+		const { service, statsStorage } = createService({
+			files: [file],
+			caches: { [file.path]: { tags: [{ tag: "#novel" }] } },
+			fileContents: { [file.path]: "hello" },
+		});
 		statsStorage.getLastTotalCharacterCount.mockResolvedValueOnce(null);
-		const calcSpy = vi
-			.spyOn(service as any, "calculateTotalCharacterCount")
-			.mockResolvedValueOnce(1500);
+		statsStorage.getFileCharacterCounts.mockResolvedValueOnce(new Map());
 		const refreshSpy = vi
 			.spyOn(service as any, "refreshViews")
 			.mockImplementation(() => undefined);
 
-		await service.collectData();
+		await collectWithTimers(service);
 
-		expect(calcSpy).toHaveBeenCalledWith("novel");
-		expect(statsStorage.saveLastTotalCharacterCount).toHaveBeenCalledWith(1500, "novel");
+		expect(statsStorage.saveFileCharacterCount).toHaveBeenCalledWith("novel", file.path, 5);
+		expect(statsStorage.saveLastTotalCharacterCount).toHaveBeenCalledWith(5, "novel");
 		expect(statsStorage.updateDailyStats).not.toHaveBeenCalled();
 		expect(statsStorage.updateHourlyStats).not.toHaveBeenCalled();
 		expect(refreshSpy).toHaveBeenCalled();
+	});
+
+	test("does not count initial characters for newly discovered files", async () => {
+		const existing = createTFile("a.md");
+		const newlyDiscovered = createTFile("b.md");
+		const { service, statsStorage } = createService({
+			files: [existing, newlyDiscovered],
+			caches: {
+				[existing.path]: { tags: [{ tag: "#novel" }] },
+				[newlyDiscovered.path]: { tags: [{ tag: "#novel" }] },
+			},
+			fileContents: {
+				[existing.path]: "1234567", // 7
+				[newlyDiscovered.path]: "x".repeat(100), // 100 (should be baseline only)
+			},
+		});
+		statsStorage.getLastTotalCharacterCount.mockResolvedValueOnce(5);
+		statsStorage.getFileCharacterCounts.mockResolvedValueOnce(
+			new Map([[existing.path, 5]])
+		);
+		vi.spyOn(service as any, "refreshViews").mockImplementation(() => undefined);
+
+		await collectWithTimers(service);
+
+		expect(statsStorage.updateDailyStats).toHaveBeenCalledWith("2025-10-02", 2, "novel");
+		expect(statsStorage.updateHourlyStats).toHaveBeenCalledWith("2025-10-02", 2, "novel", 12);
+		expect(statsStorage.saveFileCharacterCount).toHaveBeenCalledWith("novel", newlyDiscovered.path, 100);
+	});
+
+	test("migrates safely when only lastTotal is present (no spike)", async () => {
+		const file = createTFile("a.md");
+		const { service, statsStorage } = createService({
+			files: [file],
+			caches: { [file.path]: { tags: [{ tag: "#novel" }] } },
+			fileContents: { [file.path]: "hello" },
+		});
+		statsStorage.getLastTotalCharacterCount.mockResolvedValueOnce(999);
+		statsStorage.getFileCharacterCounts.mockResolvedValueOnce(new Map());
+		vi.spyOn(service as any, "refreshViews").mockImplementation(() => undefined);
+
+		await collectWithTimers(service);
+
+		expect(statsStorage.updateDailyStats).not.toHaveBeenCalled();
+		expect(statsStorage.updateHourlyStats).not.toHaveBeenCalled();
+		expect(statsStorage.saveFileCharacterCount).toHaveBeenCalledWith("novel", file.path, 5);
 	});
 });
 
