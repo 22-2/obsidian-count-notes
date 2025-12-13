@@ -8,33 +8,13 @@ import { isPathInExcludedFolders } from "src/utils/excludedFolders";
 
 const logger = log.getLogger("DataCollectionService");
 
-export class DataCollectionService {
-	private static readonly COUNT_CONCURRENCY = 6;
+const COUNT_CONCURRENCY = 6;
 
+export class DataCollectionService {
 	constructor(
 		private readonly plugin: CountNovelsPlugin,
 		private readonly statsStorage: StatsStorage
 	) {}
-
-	private async yieldToEventLoop(): Promise<void> {
-		await new Promise((resolve) => setTimeout(resolve, 0));
-	}
-
-	private async mapWithConcurrency<T>(
-		files: TFile[],
-		mapper: (file: TFile) => Promise<T>
-	): Promise<T[]> {
-		const results: T[] = [];
-		const concurrency = DataCollectionService.COUNT_CONCURRENCY;
-
-		for (let i = 0; i < files.length; i += concurrency) {
-			const chunk = files.slice(i, i + concurrency);
-			results.push(...(await Promise.all(chunk.map(mapper))));
-			await this.yieldToEventLoop();
-		}
-
-		return results;
-	}
 
 	async findFilesWithTag(tag: string): Promise<TFile[]> {
 		const normalizedTag = tag?.trim();
@@ -47,35 +27,16 @@ export class DataCollectionService {
 			if (excluded.length && isPathInExcludedFolders(file.path, excluded)) {
 				return false;
 			}
-			return this.hasTag(file, normalizedTag);
+			return hasTag(this.plugin, file, normalizedTag);
 		});
-	}
-
-	private hasTag(file: TFile, tag: string): boolean {
-		try {
-			const cache = this.plugin.app.metadataCache.getFileCache(file);
-			if (!cache) return false;
-			const inlineTag = `#${tag}`;
-
-			// Inline tags (#novel)
-			if (cache.tags?.some((t) => t.tag === inlineTag)) return true;
-
-			// Frontmatter tags (tags: [novel])
-			const fmTags = cache.frontmatter?.tags;
-			if (!fmTags) return false;
-			const fmTagList = Array.isArray(fmTags) ? fmTags : [fmTags];
-			return fmTagList.includes(tag);
-		} catch (e) {
-			logger.warn(`Error checking tags for ${file.path}`, e);
-			return false;
-		}
 	}
 
 	async countCharactersInFile(file: TFile): Promise<number> {
 		try {
 			const content = await this.plugin.app.vault.cachedRead(file);
 			const { content: markdownContent } = splitMd(content);
-			return markdownContent.length;
+			// 空白(半角/全角/改行/タブ等)はカウントしない
+			return markdownContent.replace(/(?:[\s\u3000]| - )+/g, "").length;
 		} catch (error) {
 			logger.error(`Error processing file ${file.path}:`, error);
 			return 0;
@@ -84,7 +45,7 @@ export class DataCollectionService {
 
 	async calculateTotalCharacterCount(tag: string): Promise<number> {
 		const files = await this.findFilesWithTag(tag);
-		const counts = await this.mapWithConcurrency(files, (f) => this.countCharactersInFile(f));
+		const counts = await mapWithConcurrency(files, (f) => this.countCharactersInFile(f));
 		const total = counts.reduce((sum, count) => sum + count, 0);
 
 		logger.log(`Total for "${tag}": ${total}`);
@@ -94,7 +55,7 @@ export class DataCollectionService {
 	private async calculateCharacterCountsByFile(tag: string): Promise<Map<string, number>> {
 		const files = await this.findFilesWithTag(tag);
 		const results = new Map<string, number>();
-		const counts = await this.mapWithConcurrency(files, (f) => this.countCharactersInFile(f));
+		const counts = await mapWithConcurrency(files, (f) => this.countCharactersInFile(f));
 		for (let i = 0; i < files.length; i++) {
 			results.set(files[i].path, counts[i] ?? 0);
 		}
@@ -177,16 +138,60 @@ export class DataCollectionService {
 	}
 
 	private refreshViews(): void {
-		this.plugin.app.workspace.iterateAllLeaves((leaf) => {
-			if (leaf.view.getViewType() === VIEW_TYPE_COUNT_NOVEL) {
-				const view = leaf.view as any;
-				if (typeof view.refreshStats === "function") {
-					view.refreshStats();
-				} else {
-					view.refreshSummary?.();
-					view.refreshChart?.();
-				}
-			}
-		});
+		refreshCountNovelViews(this.plugin);
 	}
+}
+
+async function yieldToEventLoop(): Promise<void> {
+	await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+async function mapWithConcurrency<TItem, TResult>(
+	items: TItem[],
+	mapper: (item: TItem) => Promise<TResult>,
+	concurrency: number = COUNT_CONCURRENCY
+): Promise<TResult[]> {
+	const results: TResult[] = [];
+
+	for (let i = 0; i < items.length; i += concurrency) {
+		const chunk = items.slice(i, i + concurrency);
+		results.push(...(await Promise.all(chunk.map(mapper))));
+		await yieldToEventLoop();
+	}
+
+	return results;
+}
+
+function hasTag(plugin: CountNovelsPlugin, file: TFile, tag: string): boolean {
+	try {
+		const cache = plugin.app.metadataCache.getFileCache(file);
+		if (!cache) return false;
+		const inlineTag = `#${tag}`;
+
+		// Inline tags (#novel)
+		if (cache.tags?.some((t) => t.tag === inlineTag)) return true;
+
+		// Frontmatter tags (tags: [novel])
+		const fmTags = cache.frontmatter?.tags;
+		if (!fmTags) return false;
+		const fmTagList = Array.isArray(fmTags) ? fmTags : [fmTags];
+		return fmTagList.includes(tag);
+	} catch (e) {
+		logger.warn(`Error checking tags for ${file.path}`, e);
+		return false;
+	}
+}
+
+function refreshCountNovelViews(plugin: CountNovelsPlugin): void {
+	plugin.app.workspace.iterateAllLeaves((leaf) => {
+		if (leaf.view.getViewType() === VIEW_TYPE_COUNT_NOVEL) {
+			const view = leaf.view as any;
+			if (typeof view.refreshStats === "function") {
+				view.refreshStats();
+			} else {
+				view.refreshSummary?.();
+				view.refreshChart?.();
+			}
+		}
+	});
 }

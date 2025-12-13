@@ -332,6 +332,17 @@ describe("DataCollectionService character counting", () => {
 		expect(length).toBe("本文テキスト".length);
 	});
 
+	test("does not count whitespace including full-width spaces", async () => {
+		const target = createTFile("whitespace.md");
+		const content = "---\ntitle: test\n---\na b\u3000c\n\td";
+		const { service } = createService({
+			fileContents: { [target.path]: content },
+		});
+
+		const length = await service.countCharactersInFile(target as any);
+		expect(length).toBe("abcd".length);
+	});
+
 	test("returns 0 when file read fails", async () => {
 		const target = createTFile("broken.md");
 		const { service, plugin } = createService();
