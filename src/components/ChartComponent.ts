@@ -17,6 +17,7 @@ import type { ChartDataPoint, PeriodType } from "../schemas";
 export class ChartComponent {
 	private container: HTMLElement;
 	private chartInstance?: Chart;
+	private canvasEl?: HTMLCanvasElement;
 	private static isChartJsRegistered = false;
 
 	constructor(container: HTMLElement) {
@@ -25,32 +26,47 @@ export class ChartComponent {
 	}
 
 	public render(chartData: ChartDataPoint[], periodType: PeriodType): void {
-		this.destroyExistingChart();
-		this.container.empty();
+		const hadChart = Boolean(this.chartInstance);
 
 		if (chartData.length === 0) {
+			this.destroyExistingChart();
+			this.container.empty();
 			renderNoDataMessage(this.container);
 			return;
 		}
 
-		const canvas = this.container.createEl("canvas", {
-			cls: "count-novels-chart-canvas",
-		});
-
 		try {
 			const colors = getThemeColors();
-			// dateプロパティを活用して「現在」を特定
 			const activeIndex = findActiveIndex(chartData, periodType);
-
 			const chartConfig = createChartConfiguration(
 				chartData,
 				periodType,
 				colors,
 				activeIndex
 			);
-			this.chartInstance = new Chart(canvas, chartConfig);
+
+			if (!this.chartInstance) {
+				this.container.empty();
+				this.canvasEl = this.container.createEl("canvas", {
+					cls: "count-novels-chart-canvas",
+				});
+				this.chartInstance = new Chart(this.canvasEl, chartConfig);
+				return;
+			}
+
+			// In-place update to avoid flicker
+			this.chartInstance.data = chartConfig.data;
+			this.chartInstance.options = chartConfig.options ?? {};
+			this.chartInstance.update("none");
 		} catch (error) {
-			console.error("Count Novels: Failed to create chart:", error);
+			console.error("Count Novels: Failed to create/update chart:", error);
+
+			// 更新時の一時的な失敗でフォールバック表示に切り替えるとチラつくため、
+			// 既存チャートがある場合は前回表示を維持する。
+			if (hadChart) return;
+
+			this.destroyExistingChart();
+			this.container.empty();
 			renderChartFallback(this.container, chartData);
 		}
 	}
@@ -64,6 +80,7 @@ export class ChartComponent {
 			this.chartInstance.destroy();
 			this.chartInstance = undefined;
 		}
+		this.canvasEl = undefined;
 	}
 }
 

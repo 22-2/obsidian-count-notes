@@ -10,7 +10,7 @@
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
 		"check-types": "tsc -noEmit -skipLibCheck",
 		"repomix": "pnpm dlx repomix && code ./repomix-output.md",
-		"test": "vitest",
+		"test": "vitest run",
 		"test:watch": "vitest --watch",
 		"test:e2e": "playwright test",
 		"test:coverage": "vitest run --coverage",

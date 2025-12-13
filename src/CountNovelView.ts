@@ -21,6 +21,9 @@ export class CountNovelView extends ItemView {
 	private clockComponent?: ClockComponent;
 	private currentPeriod: PeriodType = "month";
 	private currentTag: string = "novel";
+	private scheduledRefreshHandle?: number;
+	private isRefreshing = false;
+	private refreshQueued = false;
 
 	navigation = true;
 
@@ -290,6 +293,32 @@ private async renderMainInterface(container: HTMLElement): Promise<void> {
 		}
 	}
 
+	private requestRefresh(): void {
+		if (this.scheduledRefreshHandle !== undefined) return;
+		this.scheduledRefreshHandle = window.requestAnimationFrame(() => {
+			this.scheduledRefreshHandle = undefined;
+			void this.runRefresh();
+		});
+	}
+
+	private async runRefresh(): Promise<void> {
+		if (this.isRefreshing) {
+			this.refreshQueued = true;
+			return;
+		}
+
+		this.isRefreshing = true;
+		try {
+			await this.updateContent();
+		} finally {
+			this.isRefreshing = false;
+			if (this.refreshQueued) {
+				this.refreshQueued = false;
+				this.requestRefresh();
+			}
+		}
+	}
+
 	public async refreshView(): Promise<void> {
 		try {
 			await this.renderView();
@@ -299,15 +328,15 @@ private async renderMainInterface(container: HTMLElement): Promise<void> {
 	}
 
 	public async refreshSummary(): Promise<void> {
-		await this.updateContent();
+		this.requestRefresh();
 	}
 
 	public async refreshChart(): Promise<void> {
-		await this.updateContent();
+		this.requestRefresh();
 	}
 
 	public async refreshStats(): Promise<void> {
-		await this.updateContent();
+		this.requestRefresh();
 	}
 
 	public getCurrentPeriod(): PeriodType {

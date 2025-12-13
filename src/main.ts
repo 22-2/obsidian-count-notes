@@ -46,7 +46,6 @@ export default class CountNovelsPlugin extends Plugin {
 			this.dataStorage.updateLastCollectedAt(new Date().toISOString());
 			await this.dataStorage.saveData();
 			this.updateStatusBar();
-			await this.refreshViews();
 		} catch (error) {
 			log.error("Count Novels: Data collection failed:", error);
 			throw error;
@@ -192,7 +191,7 @@ export default class CountNovelsPlugin extends Plugin {
 		}
 	}
 
-	private async handleManualDataCollection(): Promise<void> {
+	async handleManualDataCollection(): Promise<void> {
 		log.debug("Count Novels: Manual data collection triggered");
 		try {
 			await this.collectData();
