@@ -1,63 +1,18 @@
-import { TFile, Notice } from "obsidian";
+import { TFile } from "obsidian";
 import { splitMd } from "src/utils/markdwon";
 import type CountNovelsPlugin from "../main";
 import { VIEW_TYPE_COUNT_NOVEL } from "../utils/constants";
 import type { StatsStorage } from "./statsStorage";
 import log from "loglevel";
-// @ts-expect-error: inline worker import
-import CountWorker from "../workers/count.worker.ts";
 import { isPathInExcludedFolders } from "src/utils/excludedFolders";
 
 const logger = log.getLogger("DataCollectionService");
 
 export class DataCollectionService {
-	private countWorker?: Worker;
-	private pendingResponses: Map<string, (n: number) => void> = new Map();
-	private idCounter = 0;
-
 	constructor(
 		private readonly plugin: CountNovelsPlugin,
 		private readonly statsStorage: StatsStorage
 	) {
-		this.setupWorker();
-	}
-
-	private setupWorker(): void {
-		try {
-			const factory = CountWorker;
-			this.countWorker = factory();
-			
-			if (this.countWorker) {
-				this.countWorker.onmessage = (ev: MessageEvent) => {
-					const data = ev.data;
-					if (!data) return;
-
-					if (data.results && Array.isArray(data.results)) {
-						for (const r of data.results) {
-							const resolver = this.pendingResponses.get(r.id);
-							if (resolver) {
-								resolver(r.count);
-								this.pendingResponses.delete(r.id);
-							}
-						}
-						return;
-					}
-
-					if (data.id && typeof data.count === "number") {
-						const resolver = this.pendingResponses.get(data.id);
-						if (resolver) {
-							resolver(data.count);
-							this.pendingResponses.delete(data.id);
-						}
-					}
-				};
-			}
-		} catch (e) {
-			const msg = "Count Novels: Worker initialization failed.";
-			new Notice(msg);
-			logger.error(msg, e);
-			this.countWorker = undefined;
-		}
 	}
 
 	async findFilesWithTag(tag: string): Promise<TFile[]> {
@@ -96,22 +51,10 @@ export class DataCollectionService {
 	}
 
 	async countCharactersInFile(file: TFile): Promise<number> {
-		// Worker必須: 存在しない場合はNoticeを出して停止
-		if (!this.countWorker) {
-			const msg = "Count Novels: Worker is not active. Processing stopped.";
-			new Notice(msg);
-			throw new Error(msg);
-		}
-
 		try {
 			const content = await this.plugin.app.vault.cachedRead(file);
 			const { content: markdownContent } = splitMd(content);
-			const id = `c_${++this.idCounter}_${Date.now()}`;
-
-			return new Promise<number>((resolve) => {
-				this.pendingResponses.set(id, resolve);
-				this.countWorker!.postMessage({ id, content: markdownContent });
-			});
+			return markdownContent.length;
 		} catch (error) {
 			logger.error(`Error processing file ${file.path}:`, error);
 			return 0;
