@@ -9,14 +9,36 @@ import { isPathInExcludedFolders } from "src/utils/excludedFolders";
 const logger = log.getLogger("DataCollectionService");
 
 export class DataCollectionService {
+	private static readonly COUNT_CONCURRENCY = 6;
+
 	constructor(
 		private readonly plugin: CountNovelsPlugin,
 		private readonly statsStorage: StatsStorage
-	) {
+	) {}
+
+	private async yieldToEventLoop(): Promise<void> {
+		await new Promise((resolve) => setTimeout(resolve, 0));
+	}
+
+	private async mapWithConcurrency<T>(
+		files: TFile[],
+		mapper: (file: TFile) => Promise<T>
+	): Promise<T[]> {
+		const results: T[] = [];
+		const concurrency = DataCollectionService.COUNT_CONCURRENCY;
+
+		for (let i = 0; i < files.length; i += concurrency) {
+			const chunk = files.slice(i, i + concurrency);
+			results.push(...(await Promise.all(chunk.map(mapper))));
+			await this.yieldToEventLoop();
+		}
+
+		return results;
 	}
 
 	async findFilesWithTag(tag: string): Promise<TFile[]> {
-		if (!tag?.trim()) return [];
+		const normalizedTag = tag?.trim();
+		if (!normalizedTag) return [];
 
 		const files = this.plugin.app.vault.getMarkdownFiles();
 		const excluded = this.plugin.settings.excludedFolders;
@@ -25,7 +47,7 @@ export class DataCollectionService {
 			if (excluded.length && isPathInExcludedFolders(file.path, excluded)) {
 				return false;
 			}
-			return this.hasTag(file, tag);
+			return this.hasTag(file, normalizedTag);
 		});
 	}
 
@@ -33,17 +55,16 @@ export class DataCollectionService {
 		try {
 			const cache = this.plugin.app.metadataCache.getFileCache(file);
 			if (!cache) return false;
+			const inlineTag = `#${tag}`;
 
 			// Inline tags (#novel)
-			if (cache.tags?.some((t) => t.tag === `#${tag}`)) return true;
+			if (cache.tags?.some((t) => t.tag === inlineTag)) return true;
 
 			// Frontmatter tags (tags: [novel])
 			const fmTags = cache.frontmatter?.tags;
-			if (fmTags) {
-				return (Array.isArray(fmTags) ? fmTags : [fmTags]).includes(tag);
-			}
-
-			return false;
+			if (!fmTags) return false;
+			const fmTagList = Array.isArray(fmTags) ? fmTags : [fmTags];
+			return fmTagList.includes(tag);
 		} catch (e) {
 			logger.warn(`Error checking tags for ${file.path}`, e);
 			return false;
@@ -63,32 +84,19 @@ export class DataCollectionService {
 
 	async calculateTotalCharacterCount(tag: string): Promise<number> {
 		const files = await this.findFilesWithTag(tag);
-		const concurrency = 6;
-		let total = 0;
+		const counts = await this.mapWithConcurrency(files, (f) => this.countCharactersInFile(f));
+		const total = counts.reduce((sum, count) => sum + count, 0);
 
-		for (let i = 0; i < files.length; i += concurrency) {
-			const chunk = files.slice(i, i + concurrency);
-			const counts = await Promise.all(chunk.map((f) => this.countCharactersInFile(f)));
-			total += counts.reduce((sum, c) => sum + c, 0);
-			await new Promise((r) => setTimeout(r, 0)); // UIブロック防止
-		}
-		
 		logger.log(`Total for "${tag}": ${total}`);
 		return total;
 	}
 
 	private async calculateCharacterCountsByFile(tag: string): Promise<Map<string, number>> {
 		const files = await this.findFilesWithTag(tag);
-		const concurrency = 6;
 		const results = new Map<string, number>();
-
-		for (let i = 0; i < files.length; i += concurrency) {
-			const chunk = files.slice(i, i + concurrency);
-			const counts = await Promise.all(chunk.map((f) => this.countCharactersInFile(f)));
-			for (let j = 0; j < chunk.length; j++) {
-				results.set(chunk[j].path, counts[j] ?? 0);
-			}
-			await new Promise((r) => setTimeout(r, 0)); // UIブロック防止
+		const counts = await this.mapWithConcurrency(files, (f) => this.countCharactersInFile(f));
+		for (let i = 0; i < files.length; i++) {
+			results.set(files[i].path, counts[i] ?? 0);
 		}
 
 		return results;
