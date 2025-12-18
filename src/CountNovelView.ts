@@ -220,8 +220,8 @@ private async renderMainInterface(container: HTMLElement): Promise<void> {
 				this.clockComponent.destroy();
 			}
 			
-			// If a scheduler worker exists, prefer external ticks; otherwise allow worker/interval fallback inside component
-			const useWorkerFallback = !this.plugin.schedulerWorker;
+			// Always use worker/interval fallback inside component since scheduler worker is removed
+			const useWorkerFallback = true;
 			this.clockComponent = new ClockComponent(container, useWorkerFallback);
 			this.clockComponent.mount();
 
@@ -232,12 +232,6 @@ private async renderMainInterface(container: HTMLElement): Promise<void> {
 				error
 			);
 			this.renderErrorMessage();
-		}
-	}
-
-	public handleTick(now?: number): void {
-		if (this.clockComponent) {
-			this.clockComponent.handleTick(now);
 		}
 	}
 

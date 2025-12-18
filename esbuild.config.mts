@@ -5,7 +5,6 @@ import path from "path";
 import process from "process";
 
 import { copyPlugin } from "./copyPlugin.mts";
-import inlineWorkerPlugin from "esbuild-plugin-inline-worker";
 import manifest from "./manifest.json";
 import { writeFileSync } from "fs";
 dotenv.config();
@@ -74,7 +73,7 @@ const context = await esbuild.context({
 				.replace(/[\\/:*?"<>|\s.]/g, "-")
 		),
 	},
-	plugins: [copyPlugin(copyOpts), inlineWorkerPlugin()],
+	plugins: [copyPlugin(copyOpts)],
 	entryPoints: ["src/main.ts"],
 	bundle: true,
 	external: [

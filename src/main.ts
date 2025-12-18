@@ -4,10 +4,6 @@ import { CountNovelView } from "./CountNovelView";
 import { DataStorage } from "./data";
 import { DEFAULT_SETTINGS, type CountNovelsSettings } from "./schemas";
 import { DataCollectionService } from "./services/dataCollection";
-import {
-	setupAndStartWorker,
-	terminateWorker,
-} from "./services/schedulerWorkerService";
 import { StatsStorage } from "./services/statsStorage";
 import { CountNovelsSettingTab } from "./settings";
 import { VIEW_TYPE_COUNT_NOVEL } from "./utils/constants";
@@ -22,8 +18,6 @@ export default class CountNovelsPlugin extends Plugin {
 	dataStorage!: DataStorage;
 	statsStorage!: StatsStorage;
 	dataCollectionService!: DataCollectionService;
-	statusBarItemEl!: HTMLElement;
-	schedulerWorker?: Worker;
 
 	async onload(): Promise<void> {
 		try {
@@ -37,7 +31,6 @@ export default class CountNovelsPlugin extends Plugin {
 	}
 
 	onunload(): void {
-		terminateWorker(this);
 	}
 
 	async collectData(): Promise<void> {
@@ -45,16 +38,10 @@ export default class CountNovelsPlugin extends Plugin {
 			await this.dataCollectionService.collectData();
 			this.dataStorage.updateLastCollectedAt(new Date().toISOString());
 			await this.dataStorage.saveData();
-			this.updateStatusBar();
 		} catch (error) {
 			log.error("Count Novels: Data collection failed:", error);
 			throw error;
 		}
-	}
-
-	updateStatusBar(): void {
-		const lastCollectedAt = this.dataStorage.getData()?.lastCollectedAt;
-		this.statusBarItemEl.setText(this.formatStatusBarText(lastCollectedAt));
 	}
 
 	// ===== Private Methods =====
@@ -63,7 +50,6 @@ export default class CountNovelsPlugin extends Plugin {
 		await this.initializeServices();
 		this.setupUI();
 		await this.performInitialDataLoad();
-		setupAndStartWorker(this);
 	}
 
 	private async initializeServices(): Promise<void> {
@@ -86,13 +72,11 @@ export default class CountNovelsPlugin extends Plugin {
 			return view;
 		});
 		this.registerCommands();
-		this.statusBarItemEl = this.addStatusBarItem();
 	}
 
 	private async performInitialDataLoad(): Promise<void> {
 		await this.dataStorage.loadData();
 		await this.dataCollectionService.collectData();
-		this.updateStatusBar();
 	}
 
 	private async loadSettings(): Promise<void> {
@@ -207,19 +191,6 @@ export default class CountNovelsPlugin extends Plugin {
 			const view = leaf.view as CountNovelView;
 			await view.renderView?.();
 		}
-	}
-
-	private formatStatusBarText(lastCollectedAt: string | undefined): string {
-		if (!lastCollectedAt) return "Count Novels: No data";
-
-		const lastCollectedDate = new Date(lastCollectedAt);
-		const now = new Date();
-		const diffInMinutes = Math.floor(
-			(now.getTime() - lastCollectedDate.getTime()) / (1000 * 60)
-		);
-
-		if (diffInMinutes < 1) return "Count Novels: Just now";
-		return `Count Novels: ${diffInMinutes}m ago`;
 	}
 
 	/** 古い設定形式から新しい形式へ移行 */

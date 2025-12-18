@@ -36,7 +36,7 @@ export class DataCollectionService {
 			const content = await this.plugin.app.vault.cachedRead(file);
 			const { content: markdownContent } = splitMd(content);
 			// 空白(半角/全角/改行/タブ等)はカウントしない
-			return markdownContent.replace(/(?:[\s\u3000]| - )+/g, "").length;
+			return markdownContent.replace(/(?:[\s\u3000]|\-\s1)+/g, "").length;
 		} catch (error) {
 			logger.error(`Error processing file ${file.path}:`, error);
 			return 0;
